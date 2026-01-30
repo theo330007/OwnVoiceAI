@@ -111,6 +111,10 @@ export async function scrapeInstagramTrends(
             geographic_focus: trend.geographic_focus || [],
             actionable_insight: trend.actionable_insight || '',
             source_content: trend.source_content || '',
+            content_ideas: trend.content_ideas || [],
+            hook_templates: trend.hook_templates || [],
+            content_formats: trend.content_formats || [],
+            why_it_works: trend.why_it_works || '',
           },
         });
         addedCount++;

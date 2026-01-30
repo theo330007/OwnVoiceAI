@@ -97,6 +97,19 @@ Key Players: @creatorstudio, @aiartists, @techcreators, Adobe, Midjourney
 Current Momentum: Peak - mainstream adoption happening NOW
 Geographic Focus: Global, particularly strong in US, Europe, Asia
 
+Content Ideas for Creators:
+1. "Before/After" showing manual editing vs AI-assisted workflow - prove time savings
+2. "My AI content creation tech stack" - showcase all tools you use
+3. Tutorial Reel: "How I create 30 posts in 2 hours using AI"
+
+Hook Templates:
+- "POV: You're still editing content manually in 2026"
+- "This AI tool just replaced my entire editing team"
+- "If you're a content creator and NOT using AI, you're already behind"
+
+Best Formats: Reel, TikTok, YouTube Short, Carousel
+Why It Works: Novelty + Proof of efficiency. People love seeing time-saving hacks and the "future is here" narrative gets massive engagement.
+
 ## "Quiet Luxury" Aesthetic Dominance
 The loud logo era is over. Minimalist, understated wealth signaling through quality and craftsmanship is the new status symbol.
 
@@ -114,6 +127,19 @@ Real Examples:
 Key Players: @fashionista, @oldmoneyaesthetic, @styleinfluencer, The Row brand, Loro Piana
 Current Momentum: Rising - gaining massive traction across demographics
 Geographic Focus: US, Europe (especially UK/Italy)
+
+Content Ideas for Creators:
+1. "How to look expensive on a budget" - Quiet luxury dupes and styling tips
+2. "10 pieces for a capsule wardrobe" - Minimalist, timeless essentials
+3. "Rich person aesthetic" transformation videos
+
+Hook Templates:
+- "Old money aesthetic is the new flex. No logos, just quality."
+- "If you're still wearing loud logos, you're screaming 'I'm trying too hard'"
+- "This is what REAL wealth looks like"
+
+Best Formats: Carousel, Reel, Pinterest Pin, TikTok
+Why It Works: Aspiration + Anti-consumerism. People want to look wealthy but hate being sold to. This trend satisfies both desires.
 
 ## Remote Work Location Arbitrage
 Digital nomads are optimizing for cost of living while maintaining high salaries. Southeast Asia, Portugal, and Latin America are trending destinations.
@@ -141,6 +167,19 @@ Real Examples:
 Key Players: @mrbeast, @contentking, @tiktokguru, Meta, TikTok, YouTube
 Current Momentum: Peak - fully mainstream, long-form struggling
 Geographic Focus: Global phenomenon
+
+Content Ideas for Creators:
+1. Repurpose long-form content into 60-second highlights with punchy hooks
+2. "Day in the life" fast-cut montages with trending audio
+3. Educational content: "3 things you didn't know about [topic]"
+
+Hook Templates:
+- "If you're not doing Reels in 2026, you're invisible"
+- "Long-form is dying. Here's what's working instead"
+- "POV: You finally understand why everyone's obsessed with short-form"
+
+Best Formats: Reel, TikTok, YouTube Short, Stories
+Why It Works: Platform algorithms HEAVILY favor short-form. 3-second hook = algorithm push. Fast cuts = pattern interrupts = watch time.
 
 ## Micro-Communities Over Mass Audiences
 People are leaving public social media for intimate Discord servers, Slack groups, and private communities. Exclusivity and authenticity are valued over reach.

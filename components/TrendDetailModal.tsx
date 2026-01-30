@@ -64,6 +64,10 @@ export function TrendDetailModal({ trend, isOpen, onClose }: Props) {
   const momentum = trend.metadata?.momentum || 'Unknown';
   const geographicFocus = trend.metadata?.geographic_focus || [];
   const actionableInsight = trend.metadata?.actionable_insight || '';
+  const contentIdeas = trend.metadata?.content_ideas || [];
+  const hookTemplates = trend.metadata?.hook_templates || [];
+  const contentFormats = trend.metadata?.content_formats || [];
+  const whyItWorks = trend.metadata?.why_it_works || '';
 
   return (
     <>
@@ -260,12 +264,108 @@ export function TrendDetailModal({ trend, isOpen, onClose }: Props) {
               </div>
             )}
 
+            {/* Why It Works */}
+            {whyItWorks && (
+              <div>
+                <h3 className="font-serif text-xl text-sage mb-3 flex items-center gap-2">
+                  <span className="w-1 h-6 bg-dusty-rose rounded-full" />
+                  🧠 Why This Works
+                </h3>
+                <Card className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-2xl p-6 border border-purple-200">
+                  <p className="text-sage leading-relaxed italic">
+                    "{whyItWorks}"
+                  </p>
+                </Card>
+              </div>
+            )}
+
+            {/* Content Ideas for Creators */}
+            {contentIdeas.length > 0 && (
+              <div>
+                <h3 className="font-serif text-xl text-sage mb-3 flex items-center gap-2">
+                  <span className="w-1 h-6 bg-dusty-rose rounded-full" />
+                  💡 Content Ideas You Can Create RIGHT NOW
+                </h3>
+                <div className="grid gap-3">
+                  {contentIdeas.map((idea: string, idx: number) => (
+                    <Card
+                      key={idx}
+                      className="bg-gradient-to-r from-dusty-rose/5 to-sage/5 rounded-2xl p-5 border border-dusty-rose/20 hover:border-dusty-rose/40 transition-all cursor-pointer group"
+                    >
+                      <div className="flex items-start gap-4">
+                        <div className="w-8 h-8 bg-dusty-rose text-white rounded-xl flex items-center justify-center flex-shrink-0 font-bold text-sm group-hover:scale-110 transition-transform">
+                          {idx + 1}
+                        </div>
+                        <p className="text-sage leading-relaxed flex-1 pt-0.5 font-medium">
+                          {idea}
+                        </p>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Hook Templates */}
+            {hookTemplates.length > 0 && (
+              <div>
+                <h3 className="font-serif text-xl text-sage mb-3 flex items-center gap-2">
+                  <span className="w-1 h-6 bg-dusty-rose rounded-full" />
+                  🎣 Hook Templates (Click to Copy)
+                </h3>
+                <div className="space-y-3">
+                  {hookTemplates.map((hook: string, idx: number) => (
+                    <button
+                      key={idx}
+                      onClick={() => {
+                        navigator.clipboard.writeText(hook);
+                        setCopiedKeyword(hook);
+                        setTimeout(() => setCopiedKeyword(null), 2000);
+                      }}
+                      className="w-full text-left bg-white rounded-2xl p-5 border border-sage/10 hover:border-dusty-rose hover:shadow-soft transition-all group"
+                    >
+                      <div className="flex items-center justify-between gap-4">
+                        <p className="text-sage leading-relaxed flex-1 font-medium group-hover:text-dusty-rose transition-colors">
+                          {hook}
+                        </p>
+                        {copiedKeyword === hook ? (
+                          <CheckCircle className="w-5 h-5 text-dusty-rose flex-shrink-0" />
+                        ) : (
+                          <Copy className="w-5 h-5 text-sage/40 group-hover:text-dusty-rose flex-shrink-0" />
+                        )}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Content Formats */}
+            {contentFormats.length > 0 && (
+              <div>
+                <h3 className="font-serif text-xl text-sage mb-3 flex items-center gap-2">
+                  <span className="w-1 h-6 bg-dusty-rose rounded-full" />
+                  📱 Best Content Formats
+                </h3>
+                <div className="flex flex-wrap gap-3">
+                  {contentFormats.map((format: string, idx: number) => (
+                    <div
+                      key={idx}
+                      className="px-5 py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-full font-semibold shadow-soft hover:shadow-soft-lg transition-all"
+                    >
+                      {format}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Actionable Insight */}
             {actionableInsight && (
               <div>
                 <h3 className="font-serif text-xl text-sage mb-3 flex items-center gap-2">
                   <span className="w-1 h-6 bg-dusty-rose rounded-full" />
-                  How to Leverage This Trend
+                  ⚡ Quick Win Strategy
                 </h3>
                 <Card className="bg-gradient-to-br from-dusty-rose/10 to-sage/5 rounded-2xl p-6 border border-dusty-rose/20">
                   <div className="flex items-start gap-4">

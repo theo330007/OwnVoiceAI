@@ -17,6 +17,10 @@ export interface ExtractedTrend {
   momentum?: string;
   geographic_focus?: string[];
   actionable_insight?: string;
+  content_ideas?: string[];
+  hook_templates?: string[];
+  content_formats?: string[];
+  why_it_works?: string;
 }
 
 export class TrendExtractionService {
@@ -55,6 +59,8 @@ For NICHE trends, focus on:
 - Emerging subcultural movements
 - Innovative techniques or formats
 
+CRITICAL: Focus on helping CONTENT CREATORS get inspired and capitalize on this trend.
+
 Return your analysis as a JSON array of trends with this structure:
 [
   {
@@ -74,7 +80,19 @@ Return your analysis as a JSON array of trends with this structure:
     "key_players": ["Creators, influencers, or brands driving this trend"],
     "momentum": "Rising/Peak/Declining - describe current trajectory",
     "geographic_focus": ["US", "Global", "Europe", etc - where this trend is strongest],
-    "actionable_insight": "One sentence on how content creators can leverage this trend"
+    "actionable_insight": "One sentence on how content creators can leverage this trend",
+    "content_ideas": [
+      "Specific content idea 1 creators can make RIGHT NOW",
+      "Specific content idea 2 creators can make RIGHT NOW",
+      "Specific content idea 3 creators can make RIGHT NOW"
+    ],
+    "hook_templates": [
+      "POV: [hook related to trend]",
+      "If you're not doing [trend], you're...",
+      "This is how I [action] using [trend]"
+    ],
+    "content_formats": ["Reel", "Carousel", "Story", "TikTok", "YouTube Short", "Thread"],
+    "why_it_works": "Psychology/algorithm reason why this trend gets high engagement"
   }
 ]
 
