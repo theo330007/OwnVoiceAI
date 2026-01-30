@@ -13,7 +13,7 @@ export class GeminiService {
   async generateText(prompt: string, systemInstruction?: string) {
     const chat = this.textModel.startChat({
       generationConfig: {
-        maxOutputTokens: 4096,
+        maxOutputTokens: 8192, // Increased for more detailed trend data
         temperature: 0.7,
       },
       ...(systemInstruction && { systemInstruction }),

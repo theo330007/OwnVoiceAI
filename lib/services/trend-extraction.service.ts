@@ -114,21 +114,40 @@ Extract MEGA trends from this content across ALL industries and categories.`;
 
     try {
       // Combine system and user prompts for better Gemini compatibility
-      const fullPrompt = `${systemPrompt}\n\n---\n\n${userPrompt}`;
+      const fullPrompt = `${systemPrompt}\n\n---\n\n${userPrompt}\n\nIMPORTANT: Return ONLY the JSON array, nothing else. No explanations, no markdown formatting.`;
       const response = await gemini.generateText(fullPrompt);
+
+      console.log('Raw AI response:', response.substring(0, 500));
 
       // Extract JSON from response (handle markdown code blocks)
       let jsonStr = response.trim();
+
+      // Remove markdown code blocks
       if (jsonStr.startsWith('```json')) {
-        jsonStr = jsonStr.replace(/```json\n?/g, '').replace(/```\n?/g, '');
+        jsonStr = jsonStr.replace(/```json\n?/g, '').replace(/```\n?$/g, '');
       } else if (jsonStr.startsWith('```')) {
-        jsonStr = jsonStr.replace(/```\n?/g, '');
+        jsonStr = jsonStr.replace(/```\n?/g, '').replace(/```\n?$/g, '');
       }
 
+      // Try to find JSON array in the response
+      const jsonMatch = jsonStr.match(/\[[\s\S]*\]/);
+      if (jsonMatch) {
+        jsonStr = jsonMatch[0];
+      }
+
+      console.log('Cleaned JSON:', jsonStr.substring(0, 500));
+
       const trends = JSON.parse(jsonStr);
-      return Array.isArray(trends) ? trends : [];
+
+      if (!Array.isArray(trends)) {
+        console.error('Response is not an array:', trends);
+        return [];
+      }
+
+      return trends;
     } catch (error: any) {
       console.error('Trend extraction failed:', error);
+      console.error('Response that failed to parse:', error.message);
       throw new Error(`Failed to extract trends: ${error.message}`);
     }
   }
