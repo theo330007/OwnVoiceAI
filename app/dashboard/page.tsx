@@ -2,10 +2,13 @@ import { MacroTrendsPanel } from './components/MacroTrendsPanel';
 import { NicheTrendsPanel } from './components/NicheTrendsPanel';
 import { StrategyPanel } from './components/StrategyPanel';
 import { getTrendsByLayer } from '@/app/actions/trends';
+import { requireAuth } from '@/lib/auth';
 import Link from 'next/link';
 import { Sparkles } from 'lucide-react';
 
 export default async function DashboardPage() {
+  await requireAuth();
+
   const [macroTrends, nicheTrends] = await Promise.all([
     getTrendsByLayer('macro'),
     getTrendsByLayer('niche'),

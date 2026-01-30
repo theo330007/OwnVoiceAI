@@ -8,14 +8,12 @@ import { SystemHealth } from './components/SystemHealth';
 import { PlatformSettings } from './components/PlatformSettings';
 import { InstagramScraper } from './components/InstagramScraper';
 import Link from 'next/link';
-import { ArrowLeft } from 'lucide-react';
 
 export default async function AdminDashboardPage() {
-  const [userStats, macroTrends, nicheTrends, knowledge] = await Promise.all([
+  const [userStats, macroTrends, knowledge] = await Promise.all([
     getUserStats(),
     getTrendsByLayer('macro'),
-    getTrendsByLayer('niche'),
-  getAllKnowledge(),
+    getAllKnowledge(),
   ]);
 
   // Calculate KPIs
@@ -29,20 +27,13 @@ export default async function AdminDashboardPage() {
     userStats.reduce((sum, u) => sum + (u.avg_relevance_score || 0), 0) /
       userStats.length || 0
   );
-  const totalTrends = macroTrends.length + nicheTrends.length;
+  const totalTrends = macroTrends.length;
   const knowledgeBaseSize = knowledge.length;
 
   return (
     <div className="min-h-screen bg-cream">
       <div className="container mx-auto px-6 py-8">
         <div className="mb-8">
-          <Link
-            href="/"
-            className="inline-flex items-center gap-2 text-sage/70 hover:text-sage transition-colors mb-4"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            Back to Home
-          </Link>
           <div className="flex items-center justify-between">
             <div>
               <h1 className="font-serif text-4xl text-sage mb-2">

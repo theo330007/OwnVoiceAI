@@ -1,7 +1,10 @@
+export type UserRole = 'user' | 'admin';
+
 export interface User {
   id: string;
   email: string;
   name: string;
+  role: UserRole;
   business_name: string | null;
   industry: string | null;
   avatar_url: string | null;
@@ -33,6 +36,7 @@ export interface UserStats {
 export interface CreateUserInput {
   email: string;
   name: string;
+  role?: UserRole;
   business_name?: string;
   industry?: string;
   bio?: string;
@@ -41,6 +45,7 @@ export interface CreateUserInput {
 
 export interface UpdateUserInput {
   name?: string;
+  role?: UserRole;
   business_name?: string;
   industry?: string;
   avatar_url?: string;

@@ -1,11 +1,48 @@
 import Link from 'next/link';
-import { Sparkles, TrendingUp, BookOpen, ArrowRight, Users, Settings } from 'lucide-react';
+import { Sparkles, TrendingUp, BookOpen, ArrowRight, Users, Settings, LogIn, UserPlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { getCurrentUser } from '@/lib/auth';
+import { redirect } from 'next/navigation';
 
-export default function Home() {
+export default async function Home() {
+  const user = await getCurrentUser();
+
+  // If user is logged in, redirect to dashboard
+  if (user) {
+    redirect('/dashboard');
+  }
+
   return (
     <main className="min-h-screen bg-cream">
+      {/* Top Bar for Non-Authenticated Users */}
+      <div className="border-b border-sage/10 bg-white sticky top-0 z-50">
+        <div className="container mx-auto px-6 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-sage rounded-2xl flex items-center justify-center">
+              <span className="text-cream font-serif text-xl font-bold">O</span>
+            </div>
+            <span className="font-serif text-xl text-sage hidden sm:block">
+              OwnVoice AI
+            </span>
+          </div>
+          <div className="flex gap-3">
+            <Link href="/auth/login">
+              <Button variant="outline" className="border-sage/20 hover:bg-sage/5">
+                <LogIn className="w-4 h-4 mr-2" />
+                Login
+              </Button>
+            </Link>
+            <Link href="/auth/signup">
+              <Button className="bg-sage hover:bg-sage/90 text-cream">
+                <UserPlus className="w-4 h-4 mr-2" />
+                Sign Up
+              </Button>
+            </Link>
+          </div>
+        </div>
+      </div>
+
       {/* Hero Section */}
       <div className="container mx-auto px-6 py-16">
         <div className="text-center max-w-4xl mx-auto mb-16">
@@ -22,19 +59,19 @@ export default function Home() {
           </p>
 
           <div className="flex flex-wrap gap-4 justify-center">
-            <Link href="/lab">
-              <Button size="lg" className="bg-sage hover:bg-sage/90">
-                <Sparkles className="w-5 h-5 mr-2" />
-                Open AI Lab
+            <Link href="/auth/signup">
+              <Button size="lg" className="bg-sage hover:bg-sage/90 text-cream">
+                <UserPlus className="w-5 h-5 mr-2" />
+                Get Started Free
               </Button>
             </Link>
-            <Link href="/dashboard">
+            <Link href="/auth/login">
               <Button
                 size="lg"
                 variant="outline"
                 className="border-sage/20 hover:bg-sage/5"
               >
-                View Dashboard
+                Sign In
                 <ArrowRight className="w-5 h-5 ml-2" />
               </Button>
             </Link>
@@ -84,40 +121,22 @@ export default function Home() {
           </Card>
         </div>
 
-        {/* Admin Access */}
-        <div className="mt-16">
-          <div className="max-w-md mx-auto bg-gradient-to-br from-sage/10 to-dusty-rose/10 rounded-3xl p-8 border-2 border-sage/20">
-            <p className="text-sm text-sage/70 mb-3 text-center">Admin Portal</p>
-            <Link href="/admin/dashboard">
-              <Button
-                size="lg"
-                className="w-full bg-sage hover:bg-sage/90 text-cream mb-4"
-              >
-                <Settings className="w-5 h-5 mr-2" />
-                Open Admin Dashboard
+        {/* Call to Action */}
+        <div className="mt-16 text-center">
+          <div className="max-w-2xl mx-auto bg-gradient-to-br from-sage/5 to-dusty-rose/5 rounded-3xl p-12 border border-sage/10">
+            <h2 className="font-serif text-3xl text-sage mb-4">
+              Ready to Transform Your Content Strategy?
+            </h2>
+            <p className="text-sage/70 mb-8 leading-relaxed">
+              Join wellness entrepreneurs who are creating data-driven content that resonates.
+              Start validating your ideas today.
+            </p>
+            <Link href="/auth/signup">
+              <Button size="lg" className="bg-sage hover:bg-sage/90 text-cream">
+                <UserPlus className="w-5 h-5 mr-2" />
+                Create Free Account
               </Button>
             </Link>
-            <div className="flex gap-3 justify-center flex-wrap text-xs">
-              <Link
-                href="/admin/users"
-                className="inline-flex items-center gap-1 text-sage/60 hover:text-sage transition-colors"
-              >
-                <Users className="w-3 h-3" />
-                Users
-              </Link>
-              <Link
-                href="/admin/trends"
-                className="text-sage/60 hover:text-sage transition-colors"
-              >
-                Trends
-              </Link>
-              <Link
-                href="/admin/knowledge"
-                className="text-sage/60 hover:text-sage transition-colors"
-              >
-                Knowledge
-              </Link>
-            </div>
           </div>
         </div>
       </div>

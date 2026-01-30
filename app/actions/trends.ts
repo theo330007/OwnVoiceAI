@@ -5,7 +5,7 @@ import type { Trend, TrendLayer } from '@/lib/types';
 import { revalidatePath } from 'next/cache';
 
 export async function getTrendsByLayer(layer: TrendLayer): Promise<Trend[]> {
-  const supabase = createClient();
+  const supabase = await createClient();
 
   const { data, error } = await supabase
     .from('trends')
@@ -32,7 +32,7 @@ export async function addTrend(trend: {
   relevance_score?: number;
   metadata?: Record<string, any>;
 }) {
-  const supabase = createClient();
+  const supabase = await createClient();
 
   const { data, error } = await supabase
     .from('trends')
@@ -60,7 +60,7 @@ export async function addTrend(trend: {
 }
 
 export async function deleteTrend(id: string) {
-  const supabase = createClient();
+  const supabase = await createClient();
 
   const { error } = await supabase.from('trends').delete().eq('id', id);
 

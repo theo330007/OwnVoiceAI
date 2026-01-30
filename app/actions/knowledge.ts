@@ -6,7 +6,7 @@ import type { KnowledgeBase } from '@/lib/types';
 import { revalidatePath } from 'next/cache';
 
 export async function getAllKnowledge(): Promise<KnowledgeBase[]> {
-  const supabase = createClient();
+  const supabase = await createClient();
 
   const { data, error } = await supabase
     .from('knowledge_base')
@@ -42,7 +42,7 @@ export async function addKnowledge(knowledge: {
 }
 
 export async function deleteKnowledge(id: string) {
-  const supabase = createClient();
+  const supabase = await createClient();
 
   const { error } = await supabase.from('knowledge_base').delete().eq('id', id);
 

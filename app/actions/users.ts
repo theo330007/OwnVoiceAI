@@ -5,7 +5,7 @@ import type { User, UserStats, CreateUserInput, UpdateUserInput } from '@/lib/ty
 import { revalidatePath } from 'next/cache';
 
 export async function getAllUsers(): Promise<User[]> {
-  const supabase = createClient();
+  const supabase = await createClient();
 
   const { data, error } = await supabase
     .from('users')
@@ -21,7 +21,7 @@ export async function getAllUsers(): Promise<User[]> {
 }
 
 export async function getUserStats(): Promise<UserStats[]> {
-  const supabase = createClient();
+  const supabase = await createClient();
 
   const { data, error } = await supabase
     .from('user_stats')
@@ -37,7 +37,7 @@ export async function getUserStats(): Promise<UserStats[]> {
 }
 
 export async function getUserById(id: string): Promise<User | null> {
-  const supabase = createClient();
+  const supabase = await createClient();
 
   const { data, error } = await supabase
     .from('users')
@@ -54,7 +54,7 @@ export async function getUserById(id: string): Promise<User | null> {
 }
 
 export async function createUser(input: CreateUserInput): Promise<User> {
-  const supabase = createClient();
+  const supabase = await createClient();
 
   const { data, error } = await supabase
     .from('users')
@@ -80,7 +80,7 @@ export async function createUser(input: CreateUserInput): Promise<User> {
 }
 
 export async function updateUser(id: string, input: UpdateUserInput): Promise<User> {
-  const supabase = createClient();
+  const supabase = await createClient();
 
   const { data, error } = await supabase
     .from('users')
@@ -100,7 +100,7 @@ export async function updateUser(id: string, input: UpdateUserInput): Promise<Us
 }
 
 export async function deleteUser(id: string): Promise<void> {
-  const supabase = createClient();
+  const supabase = await createClient();
 
   const { error } = await supabase
     .from('users')
@@ -115,7 +115,7 @@ export async function deleteUser(id: string): Promise<void> {
 }
 
 export async function toggleUserStatus(id: string, isActive: boolean): Promise<void> {
-  const supabase = createClient();
+  const supabase = await createClient();
 
   const { error } = await supabase
     .from('users')
@@ -131,7 +131,7 @@ export async function toggleUserStatus(id: string, isActive: boolean): Promise<v
 }
 
 export async function getUserValidations(userId: string) {
-  const supabase = createClient();
+  const supabase = await createClient();
 
   const { data, error } = await supabase
     .from('validations')

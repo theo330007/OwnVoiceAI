@@ -1,8 +1,10 @@
 import { ChatInterface } from './components/ChatInterface';
+import { requireAuth } from '@/lib/auth';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 
-export default function LabPage() {
+export default async function LabPage() {
+  await requireAuth();
   return (
     <div className="min-h-screen bg-cream">
       <div className="container mx-auto px-6 py-8">
