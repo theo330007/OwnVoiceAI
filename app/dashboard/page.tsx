@@ -2,16 +2,23 @@ import { MacroTrendsPanel } from './components/MacroTrendsPanel';
 import { NicheTrendsPanel } from './components/NicheTrendsPanel';
 import { StrategyPanel } from './components/StrategyPanel';
 import { getTrendsByLayer } from '@/app/actions/trends';
-import { requireAuth } from '@/lib/auth';
+import { getUserNicheTrends, getStrategicInsights } from '@/app/actions/user-trends';
+import { requireAuth, getCurrentUser } from '@/lib/auth';
 import Link from 'next/link';
 import { Sparkles } from 'lucide-react';
 
 export default async function DashboardPage() {
   await requireAuth();
+  const user = await getCurrentUser();
 
-  const [macroTrends, nicheTrends] = await Promise.all([
+  if (!user) {
+    throw new Error('User not found');
+  }
+
+  const [macroTrends, nicheTrends, strategicInsights] = await Promise.all([
     getTrendsByLayer('macro'),
-    getTrendsByLayer('niche'),
+    getUserNicheTrends(user.id),
+    getStrategicInsights(user.id),
   ]);
 
   return (
@@ -36,8 +43,8 @@ export default async function DashboardPage() {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <MacroTrendsPanel initialTrends={macroTrends} />
-          <NicheTrendsPanel initialTrends={nicheTrends} />
-          <StrategyPanel />
+          <NicheTrendsPanel initialTrends={nicheTrends} userId={user.id} userIndustry={user.industry || ''} />
+          <StrategyPanel insights={strategicInsights} userId={user.id} />
         </div>
       </div>
     </div>

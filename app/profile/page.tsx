@@ -3,13 +3,19 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase-browser';
-import { User, Mail, Save, Loader2 } from 'lucide-react';
+import { User, Mail, Save, Loader2, Briefcase, Building2, Globe } from 'lucide-react';
 
 export default function ProfilePage() {
   const router = useRouter();
   const [user, setUser] = useState<any>(null);
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    business_name: '',
+    industry: '',
+    bio: '',
+    website_url: '',
+  });
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -42,8 +48,14 @@ export default function ProfilePage() {
       }
 
       setUser(profile);
-      setName(profile.name || '');
-      setEmail(profile.email || '');
+      setFormData({
+        name: profile.name || '',
+        email: profile.email || '',
+        business_name: profile.business_name || '',
+        industry: profile.industry || '',
+        bio: profile.bio || '',
+        website_url: profile.website_url || '',
+      });
     } catch (error) {
       console.error('Failed to load user:', error);
       router.push('/auth/login');
@@ -61,7 +73,13 @@ export default function ProfilePage() {
 
       const { error } = await supabase
         .from('users')
-        .update({ name })
+        .update({
+          name: formData.name,
+          business_name: formData.business_name || null,
+          industry: formData.industry || null,
+          bio: formData.bio || null,
+          website_url: formData.website_url || null,
+        })
         .eq('id', user.id);
 
       if (error) throw error;
@@ -80,7 +98,14 @@ export default function ProfilePage() {
   };
 
   const handleCancel = () => {
-    setName(user.name || '');
+    setFormData({
+      name: user.name || '',
+      email: user.email || '',
+      business_name: user.business_name || '',
+      industry: user.industry || '',
+      bio: user.bio || '',
+      website_url: user.website_url || '',
+    });
     setIsEditing(false);
     setMessage(null);
   };
@@ -95,11 +120,11 @@ export default function ProfilePage() {
 
   return (
     <div className="min-h-screen bg-cream py-12 px-6">
-      <div className="max-w-2xl mx-auto">
+      <div className="max-w-3xl mx-auto">
         {/* Header */}
         <div className="mb-8">
           <h1 className="font-serif text-4xl text-sage mb-3">My Profile</h1>
-          <p className="text-sage/70">Manage your account information</p>
+          <p className="text-sage/70">Manage your account information and preferences</p>
         </div>
 
         {/* Profile Card */}
@@ -108,12 +133,15 @@ export default function ProfilePage() {
           <div className="flex items-center gap-6 mb-8 pb-8 border-b border-sage/10">
             <div className="w-20 h-20 bg-dusty-rose rounded-full flex items-center justify-center">
               <span className="text-white font-serif text-3xl">
-                {name.charAt(0).toUpperCase() || 'U'}
+                {formData.name.charAt(0).toUpperCase() || 'U'}
               </span>
             </div>
             <div>
-              <h2 className="font-serif text-2xl text-sage mb-1">{name}</h2>
-              <p className="text-sage/60 text-sm">{email}</p>
+              <h2 className="font-serif text-2xl text-sage mb-1">{formData.name || 'User'}</h2>
+              <p className="text-sage/60 text-sm">{formData.email}</p>
+              {formData.industry && (
+                <p className="text-dusty-rose text-sm font-medium mt-1 capitalize">{formData.industry}</p>
+              )}
             </div>
           </div>
 
@@ -124,15 +152,16 @@ export default function ProfilePage() {
               <label className="block text-sm font-medium text-sage mb-2">
                 <div className="flex items-center gap-2">
                   <User className="w-4 h-4" />
-                  Full Name
+                  Full Name <span className="text-red-500">*</span>
                 </div>
               </label>
               <input
                 type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 disabled={!isEditing}
                 className="w-full px-4 py-3 rounded-2xl border border-sage/20 focus:border-sage focus:outline-none focus:ring-2 focus:ring-sage/20 transition-all disabled:bg-sage/5 disabled:cursor-not-allowed"
+                required
               />
             </div>
 
@@ -146,13 +175,95 @@ export default function ProfilePage() {
               </label>
               <input
                 type="email"
-                value={email}
+                value={formData.email}
                 disabled
                 className="w-full px-4 py-3 rounded-2xl border border-sage/20 bg-sage/5 cursor-not-allowed"
               />
               <p className="text-xs text-sage/50 mt-1">
                 Email cannot be changed
               </p>
+            </div>
+
+            {/* Business Name */}
+            <div>
+              <label className="block text-sm font-medium text-sage mb-2">
+                <div className="flex items-center gap-2">
+                  <Building2 className="w-4 h-4" />
+                  Business Name
+                </div>
+              </label>
+              <input
+                type="text"
+                value={formData.business_name}
+                onChange={(e) => setFormData({ ...formData, business_name: e.target.value })}
+                disabled={!isEditing}
+                placeholder="e.g., Fertile Ground Wellness"
+                className="w-full px-4 py-3 rounded-2xl border border-sage/20 focus:border-sage focus:outline-none focus:ring-2 focus:ring-sage/20 transition-all disabled:bg-sage/5 disabled:cursor-not-allowed"
+              />
+            </div>
+
+            {/* Industry */}
+            <div>
+              <label className="block text-sm font-medium text-sage mb-2">
+                <div className="flex items-center gap-2">
+                  <Briefcase className="w-4 h-4" />
+                  Industry
+                </div>
+              </label>
+              <select
+                value={formData.industry}
+                onChange={(e) => setFormData({ ...formData, industry: e.target.value })}
+                disabled={!isEditing}
+                className="w-full px-4 py-3 rounded-2xl border border-sage/20 focus:border-sage focus:outline-none focus:ring-2 focus:ring-sage/20 transition-all disabled:bg-sage/5 disabled:cursor-not-allowed"
+              >
+                <option value="">Select industry...</option>
+                <option value="fertility">Fertility</option>
+                <option value="nutrition">Nutrition</option>
+                <option value="wellness">Wellness</option>
+                <option value="fitness">Fitness</option>
+                <option value="mentalhealth">Mental Health</option>
+                <option value="motherhood">Motherhood</option>
+                <option value="beauty">Beauty</option>
+                <option value="health">Health</option>
+              </select>
+              {!formData.industry && !isEditing && (
+                <p className="text-xs text-sage/50 mt-1">
+                  Add your industry to enable personalized Instagram trend scraping
+                </p>
+              )}
+            </div>
+
+            {/* Bio */}
+            <div>
+              <label className="block text-sm font-medium text-sage mb-2">
+                Bio
+              </label>
+              <textarea
+                value={formData.bio}
+                onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
+                disabled={!isEditing}
+                placeholder="Tell us about yourself and your content goals..."
+                rows={4}
+                className="w-full px-4 py-3 rounded-2xl border border-sage/20 focus:border-sage focus:outline-none focus:ring-2 focus:ring-sage/20 transition-all disabled:bg-sage/5 disabled:cursor-not-allowed resize-none"
+              />
+            </div>
+
+            {/* Website URL */}
+            <div>
+              <label className="block text-sm font-medium text-sage mb-2">
+                <div className="flex items-center gap-2">
+                  <Globe className="w-4 h-4" />
+                  Website URL
+                </div>
+              </label>
+              <input
+                type="url"
+                value={formData.website_url}
+                onChange={(e) => setFormData({ ...formData, website_url: e.target.value })}
+                disabled={!isEditing}
+                placeholder="https://yourwebsite.com"
+                className="w-full px-4 py-3 rounded-2xl border border-sage/20 focus:border-sage focus:outline-none focus:ring-2 focus:ring-sage/20 transition-all disabled:bg-sage/5 disabled:cursor-not-allowed"
+              />
             </div>
 
             {/* Message */}
@@ -180,7 +291,7 @@ export default function ProfilePage() {
                 <>
                   <button
                     onClick={handleSave}
-                    disabled={isSaving || !name.trim()}
+                    disabled={isSaving || !formData.name.trim()}
                     className="flex-1 flex items-center justify-center gap-2 bg-sage hover:bg-sage/90 text-cream font-medium py-3 rounded-2xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {isSaving ? (
@@ -222,6 +333,12 @@ export default function ProfilePage() {
                     month: 'long',
                     year: 'numeric',
                   })}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sage/60">Subscription</span>
+                <span className="text-sage font-medium capitalize">
+                  {user.subscription_tier || 'Free'}
                 </span>
               </div>
               <div className="flex justify-between">
