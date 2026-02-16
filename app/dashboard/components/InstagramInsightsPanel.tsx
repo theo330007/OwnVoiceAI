@@ -38,7 +38,6 @@ interface Props {
 const MOCK_INSIGHTS: InstagramInsight[] = [
   {
     id: 'theme-1',
-    user_id: '',
     insight_type: 'content_theme',
     title: 'Gut Health',
     description: '3 posts • 30% of your content',
@@ -50,7 +49,6 @@ const MOCK_INSIGHTS: InstagramInsight[] = [
   },
   {
     id: 'theme-2',
-    user_id: '',
     insight_type: 'content_theme',
     title: 'Nutrition',
     description: '4 posts • 40% of your content',
@@ -62,7 +60,6 @@ const MOCK_INSIGHTS: InstagramInsight[] = [
   },
   {
     id: 'theme-3',
-    user_id: '',
     insight_type: 'content_theme',
     title: 'Hormones',
     description: '2 posts • 20% of your content',
@@ -74,7 +71,6 @@ const MOCK_INSIGHTS: InstagramInsight[] = [
   },
   {
     id: 'hashtag-1',
-    user_id: '',
     insight_type: 'top_hashtag',
     title: '#wellness',
     description: 'You use this hashtag frequently in your content',
@@ -86,7 +82,6 @@ const MOCK_INSIGHTS: InstagramInsight[] = [
   },
   {
     id: 'hashtag-2',
-    user_id: '',
     insight_type: 'top_hashtag',
     title: '#guthealth',
     description: 'You use this hashtag frequently in your content',
@@ -98,7 +93,6 @@ const MOCK_INSIGHTS: InstagramInsight[] = [
   },
   {
     id: 'hashtag-3',
-    user_id: '',
     insight_type: 'top_hashtag',
     title: '#nutrition',
     description: 'You use this hashtag frequently in your content',
@@ -110,7 +104,6 @@ const MOCK_INSIGHTS: InstagramInsight[] = [
   },
   {
     id: 'time-1',
-    user_id: '',
     insight_type: 'best_posting_time',
     title: 'Best Time: 18:00',
     description: 'Evening wind-down time - highest engagement window',
