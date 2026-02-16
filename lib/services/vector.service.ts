@@ -7,7 +7,7 @@ export class VectorService {
     matchThreshold = 0.7,
     matchCount = 10
   ) {
-    const supabase = createClient();
+    const supabase = await createClient();
     const embedding = await gemini.generateEmbedding(query);
 
     const { data, error } = await supabase.rpc('search_knowledge_base', {
