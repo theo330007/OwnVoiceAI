@@ -133,13 +133,13 @@ export default async function AdminProjectDetailPage({
                   <p className="text-sage">{project.current_step || 'Not started'}</p>
                 </div>
 
-                {project.generated_content && (
+                {(project as any).generated_content && (
                   <div>
                     <p className="text-sm font-semibold text-sage/70 mb-2">
                       Generated Content
                     </p>
                     <div className="p-4 bg-sage/5 rounded-xl text-sm text-sage whitespace-pre-wrap">
-                      {project.generated_content}
+                      {(project as any).generated_content}
                     </div>
                   </div>
                 )}
