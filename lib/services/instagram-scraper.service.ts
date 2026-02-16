@@ -79,7 +79,7 @@ export class InstagramScraperService {
   private parseProfileData(html: string, markdown: string): InstagramProfile {
     // Extract profile data using regex patterns
     // Instagram embeds data in script tags as JSON
-    const jsonDataMatch = html.match(/<script type="application\/ld\+json">(.*?)<\/script>/s);
+    const jsonDataMatch = html.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/);
     const sharedDataMatch = html.match(/window\._sharedData\s*=\s*({.+?});/);
 
     let profileData: any = {};
