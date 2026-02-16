@@ -42,10 +42,10 @@ export async function createWorkflow(
 
     const userId = user.id;
 
-    // Fetch the strategic insight to get the trend title
+    // Fetch the strategic insight to get the trend title and content ideas
     const { data: insight, error: insightError } = await supabase
       .from('strategic_insights')
-      .select('trend_title')
+      .select('trend_title, content_ideas')
       .eq('id', insightId)
       .single();
 
@@ -56,6 +56,9 @@ export async function createWorkflow(
     // Generate project name
     const contentTypeLabel = CONTENT_TYPE_LABELS[contentType];
     const projectName = `${insight.trend_title} - ${contentTypeLabel}`;
+
+    // Get the specific content idea for this content type
+    const contentIdea = insight.content_ideas?.[contentType];
 
     // Create the workflow
     const { data: workflow, error: workflowError } = await supabase
@@ -81,8 +84,35 @@ export async function createWorkflow(
       throw new Error(`Failed to create workflow: ${workflowError.message}`);
     }
 
+    // Create a corresponding project for tracking
+    const { data: project, error: projectError } = await supabase
+      .from('projects')
+      .insert({
+        user_id: userId,
+        workflow_id: workflow.id,
+        strategic_insight_id: insightId,
+        title: projectName,
+        description: `Content creation project for ${contentTypeLabel.toLowerCase()} content`,
+        content_type: contentType,
+        trend_title: insight.trend_title,
+        status: 'in_progress',
+        current_phase: 'ideation',
+        completion_percentage: 10,
+        hook: contentIdea?.hook || null,
+        concept: contentIdea?.concept || null,
+        cta: contentIdea?.cta || null,
+      })
+      .select()
+      .single();
+
+    if (projectError) {
+      console.error('Failed to create project:', projectError);
+      // Don't throw - workflow is already created, project is just for tracking
+    }
+
     revalidatePath('/dashboard');
     revalidatePath('/lab');
+    revalidatePath('/projects');
 
     return workflow;
   } catch (error: any) {
@@ -318,4 +348,266 @@ export async function getWorkflowAssets(workflowId: string) {
   }
 
   return data || [];
+}
+
+/**
+ * Generate production assets (server-side Gemini call)
+ */
+export async function generateProductionAssets(input: {
+  trendTitle: string;
+  contentIdea: { hook: string; concept: string; cta: string };
+  contextInfo: string;
+  brandStyle: string;
+  contentFormat?: string;
+  toneStyle?: string;
+  contentAngle?: string;
+  refinementContext?: string;
+}) {
+  try {
+    const geminiService = (await import('@/lib/services/gemini.service')).gemini;
+
+    const formatLabel = input.contentFormat === 'carousel' ? 'Instagram Carousel' : input.contentFormat === 'story' ? 'Instagram Story' : 'Instagram Reel/TikTok';
+    const toneLabel = input.toneStyle === 'bold' ? 'Bold & Provocative - challenge assumptions, spark debate' : input.toneStyle === 'storytelling' ? 'Storytelling - personal narrative, emotional connection' : 'Educational - teach and inform with authority';
+    const angleLabel = input.contentAngle === 'personal_story' ? 'Personal Story - share a personal experience tied to the trend' : input.contentAngle === 'trend_commentary' ? 'Trend Commentary - react to the trend with expertise' : 'Direct Value - lead with actionable tips and takeaways';
+
+    // Build format-specific prompt sections
+    const isCarousel = input.contentFormat === 'carousel';
+    const isStory = input.contentFormat === 'story';
+
+    const scriptInstruction = isCarousel
+      ? `1. **Slide-by-Slide Script** (for Instagram Carousel, up to 10 slides):
+   - Left column ("visual"): Design direction for the slide (layout, imagery, colors, typography style)
+   - Right column ("audio"): The actual text/copy that goes on the slide
+   - First slide must be a scroll-stopping hook slide
+   - Last slide must be a clear CTA slide
+   - Make each slide self-contained yet part of a narrative flow`
+      : isStory
+      ? `1. **Story Sequence** (for Instagram Stories, 5-7 frames):
+   - Left column ("visual"): What to show/film for this story frame (camera angle, setup)
+   - Right column ("audio"): Text overlay, voiceover, or sticker text for this frame
+   - Keep each frame punchy (under 15 seconds)
+   - Include interactive elements (polls, questions, sliders) where relevant`
+      : `1. **Dual-Column Script** (for Instagram Reel/TikTok, 5-7 scenes):
+   - Left column ("visual"): Visual cues — what to film, camera movement, framing
+   - Right column ("audio"): Voiceover script or on-screen captions
+   - Make it actionable and specific for a ${input.toneStyle === 'bold' ? 'punchy, fast-paced' : input.toneStyle === 'storytelling' ? 'narrative, emotionally-paced' : 'clear, well-structured'} delivery`;
+
+    const shotListInstruction = isCarousel
+      ? `2. **Slide Visual Guidelines** (5 design directions):
+   Generate exactly 5 visual guidelines for carousel slide design.
+
+   Design Constraints:
+   - Aesthetic: Clean layouts, consistent color palette, readable typography, branded feel
+   - Mix: Cover slide, data/stat slides, quote slides, process slides, CTA slide
+
+   Each guideline must include:
+   - title: Name of the slide type (e.g., "Hook Cover Slide", "Data Point Slide")
+   - description: Detailed design instruction (colors, fonts, layout, imagery)
+   - camera_angle: Design style (e.g., "Centered Layout", "Split Grid", "Full Bleed Image")
+   - vibe_tag: Purpose of this slide (e.g., "Hook", "Authority", "Social Proof", "CTA")
+   - duration: Slide position (e.g., "Slide 1", "Slides 3-4")`
+      : isStory
+      ? `2. **Supporting Shots** (5 complementary shots):
+   Generate exactly 5 quick supporting shots for the story series.
+
+   Constraints:
+   - Keep shots raw and authentic (stories feel personal, not overly produced)
+   - Mix of selfie-style, POV, and environmental shots
+   - Each shot should be 3-8 seconds max
+
+   Each shot must include:
+   - title: Short name of the shot
+   - description: Quick visual instruction (casual, authentic feel)
+   - camera_angle: (Selfie, POV, Overhead, Close-up, etc.)
+   - vibe_tag: Mood tag (Behind-the-scenes, Authentic, Quick-tip, Interactive)
+   - duration: Recommended seconds (e.g., "3-5s")`
+      : `2. **B-Roll Shot List** (5 cinematic shots):
+   Generate exactly 5 shots that blend high-end aesthetic with credibility, aligned to the brand's visual style.
+
+   Visual Constraints:
+   - Aesthetic: Match the brand style described above. Use depth of field, natural lighting, and premium textures.
+   - Framing: Mix of Macro (detail), Eye-level (connection), and Overhead (process)
+
+   Shot Selection Logic:
+   - 2 Sensory Shots: Focus on textures, products, or environment details
+   - 2 Authority Shots: Focus on the work, expertise, or process
+   - 1 Connection Shot: The creator in their environment
+
+   Each shot must include:
+   - title: Short name of the shot
+   - description: Detailed visual instruction (lighting, movement)
+   - camera_angle: (Macro, Top-down, Eye-level, etc.)
+   - vibe_tag: Why this shot matters (Sensory, Authority, Relatability)
+   - duration: Recommended seconds (e.g., "3-5s")`;
+
+    const hookInstruction = isCarousel
+      ? `3. **A/B Hook Testing** (3 first-slide headline variations):
+   - Variation A: Viral Reach (scroll-stopping, curiosity-driven headline)
+   - Variation B: Community Trust (relatable, "me too" headline)
+   - Variation C: Direct Value (clear benefit, "you'll learn" headline)`
+      : isStory
+      ? `3. **A/B Hook Testing** (3 opening story frame variations):
+   - Variation A: Viral Reach (bold text overlay that demands a tap)
+   - Variation B: Community Trust (casual, authentic opening frame)
+   - Variation C: Direct Value (clear promise of what's coming in the next frames)`
+      : `3. **A/B Hook Testing** (3 opening line variations):
+   - Variation A: Viral Reach (algorithm-optimized, bold claim)
+   - Variation B: Community Trust (authentic, relatable)
+   - Variation C: Direct Value (clear benefit, educational)`;
+
+    const aspectRatio = isCarousel ? '1:1' : '9:16';
+
+    const assetInstruction = isCarousel
+      ? `5. **Production Assets per Slide**:
+   For EACH slide in the script, generate a list of required production assets.
+   Typical assets per slide:
+   - 1-2 images (background texture, product photo, lifestyle shot)
+   - Optional: overlay graphic or icon set
+
+   Each asset must include:
+   - id: Unique ID following pattern "scene-{slideNumber}-{type}-{purpose}" (e.g., "scene-1-image-background")
+   - type: "image" | "video" | "audio"
+   - description: Human-readable description of what this asset is
+   - generationPrompt: AI-optimized prompt for image/video generation tools (detailed, descriptive, include style keywords and aspect ratio ${aspectRatio})
+   - usage: How this asset is used (e.g., "Slide background", "Product overlay", "Texture layer")`
+      : isStory
+      ? `5. **Production Assets per Frame**:
+   For EACH story frame in the script, generate a list of required production assets.
+   Typical assets per frame:
+   - 1 image or 1 short video clip (background, selfie-style, POV)
+   - Optional: background music or sound effect
+
+   Each asset must include:
+   - id: Unique ID following pattern "scene-{frameNumber}-{type}-{purpose}" (e.g., "scene-1-video-background")
+   - type: "image" | "video" | "audio"
+   - description: Human-readable description of what this asset is
+   - generationPrompt: AI-optimized prompt for image/video/audio generation tools (detailed, descriptive, include style keywords and aspect ratio ${aspectRatio})
+   - usage: How this asset is used (e.g., "Frame background", "B-roll clip", "Ambient sound")`
+      : `5. **Production Assets per Scene**:
+   For EACH scene in the script, generate a list of required production assets.
+   Typical assets per scene:
+   - 1 video clip OR 1 image (B-roll, product shot, lifestyle footage)
+   - Optional: background music track, sound effect, or voiceover segment
+
+   Each asset must include:
+   - id: Unique ID following pattern "scene-{sceneNumber}-{type}-{purpose}" (e.g., "scene-1-video-broll")
+   - type: "image" | "video" | "audio"
+   - description: Human-readable description of what this asset is
+   - generationPrompt: AI-optimized prompt for image/video/audio generation tools (detailed, descriptive, include style keywords and aspect ratio ${aspectRatio})
+   - usage: How this asset is used (e.g., "B-roll footage", "Background image", "Ambient track")`;
+
+    const prompt = `You are an Expert Content Director${input.brandStyle ? ` for a brand with this style: ${input.brandStyle}` : ' for professional social media content'}.
+
+TREND: ${input.trendTitle}
+
+CONTENT CONCEPT:
+Hook: ${input.contentIdea.hook}
+Concept: ${input.contentIdea.concept}
+CTA: ${input.contentIdea.cta}
+
+CONTENT FORMAT: ${formatLabel}
+TONE & STYLE: ${toneLabel}
+CONTENT ANGLE: ${angleLabel}
+
+${input.contextInfo ? `BUSINESS CONTEXT:\n${input.contextInfo}\n` : ''}
+
+VISUAL STYLE: ${input.brandStyle || 'Clean, professional aesthetic with consistent visual identity'}
+
+Generate the following assets. IMPORTANT: Tailor ALL content specifically for the ${formatLabel} format with a ${input.toneStyle || 'educational'} tone and ${angleLabel} approach.
+${input.refinementContext ? `
+REFINEMENT INSTRUCTIONS (from user feedback conversation — apply these changes to the regenerated assets):
+${input.refinementContext}
+` : ''}
+
+${scriptInstruction}
+
+${shotListInstruction}
+
+${hookInstruction}
+
+${assetInstruction}
+
+ASSET GENERATION GUIDELINES:
+- ALL generation prompts must align with the brand's visual style described above
+- Use consistent aesthetic language across all prompts
+- Specify aspect ratio ${aspectRatio} in all image/video prompts
+- Make prompts detailed enough for AI image/video generators (Midjourney, DALL-E, Runway style)
+- Include lighting, composition, mood, and color palette keywords
+
+Return as JSON:
+{
+  "script": {
+    "scenes": [
+      {
+        "visual": "...",
+        "audio": "...",
+        "assets": [
+          {
+            "id": "scene-1-image-background",
+            "type": "image",
+            "description": "...",
+            "generationPrompt": "...",
+            "usage": "..."
+          }
+        ]
+      }
+    ]
+  },
+  "shot_list": [
+    {
+      "title": "...",
+      "description": "...",
+      "camera_angle": "...",
+      "vibe_tag": "...",
+      "duration": "..."
+    }
+  ],
+  "hook_variations": [
+    {"type": "Viral Reach", "hook": "..."},
+    {"type": "Community Trust", "hook": "..."},
+    {"type": "Direct Value", "hook": "..."}
+  ]
+}`;
+
+    const response = await geminiService.generateText(prompt);
+
+    // Parse JSON - strip markdown code blocks
+    let jsonStr = response.trim();
+    const codeBlockStart = '`' + '`' + '`';
+    if (jsonStr.startsWith(codeBlockStart)) {
+      jsonStr = jsonStr.replace(/```json\n?/g, '').replace(/```\n?$/g, '');
+    }
+
+    const jsonMatch = jsonStr.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      jsonStr = jsonMatch[0];
+    }
+
+    // Try parsing, if truncated try to repair by closing open brackets
+    let assets;
+    try {
+      assets = JSON.parse(jsonStr);
+    } catch {
+      // Attempt to repair truncated JSON
+      let repaired = jsonStr;
+      // Remove trailing incomplete string/value
+      repaired = repaired.replace(/,\s*"[^"]*$/, '');
+      repaired = repaired.replace(/,\s*$/, '');
+      // Count open brackets and close them
+      const openBraces = (repaired.match(/\{/g) || []).length - (repaired.match(/\}/g) || []).length;
+      const openBrackets = (repaired.match(/\[/g) || []).length - (repaired.match(/\]/g) || []).length;
+      repaired += ']'.repeat(Math.max(0, openBrackets));
+      repaired += '}'.repeat(Math.max(0, openBraces));
+      assets = JSON.parse(repaired);
+    }
+
+    return {
+      script: assets.script,
+      shot_list: assets.shot_list || [],
+      hook_variations: assets.hook_variations || [],
+    };
+  } catch (error: any) {
+    console.error('Production asset generation failed:', error);
+    throw new Error(`Failed to generate assets: ${error.message}`);
+  }
 }

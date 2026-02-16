@@ -16,6 +16,14 @@ export interface User {
     youtube?: string;
     linkedin?: string;
   };
+  persona: string | null;
+  niche: string | null;
+  positioning: string | null;
+  offering: string | null;
+  competitors: string[];
+  hot_news: string | null;
+  creator_face_url: string | null;
+  creator_voice_url: string | null;
   subscription_tier: 'free' | 'pro' | 'enterprise';
   is_active: boolean;
   metadata: Record<string, any>;
@@ -40,6 +48,12 @@ export interface CreateUserInput {
   business_name?: string;
   industry?: string;
   bio?: string;
+  persona?: string;
+  niche?: string;
+  positioning?: string;
+  offering?: string;
+  competitors?: string[];
+  hot_news?: string;
   subscription_tier?: 'free' | 'pro' | 'enterprise';
 }
 
@@ -57,6 +71,14 @@ export interface UpdateUserInput {
     youtube?: string;
     linkedin?: string;
   };
+  persona?: string;
+  niche?: string;
+  positioning?: string;
+  offering?: string;
+  competitors?: string[];
+  hot_news?: string;
+  creator_face_url?: string;
+  creator_voice_url?: string;
   subscription_tier?: 'free' | 'pro' | 'enterprise';
   is_active?: boolean;
 }

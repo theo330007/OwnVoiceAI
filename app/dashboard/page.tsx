@@ -1,8 +1,11 @@
 import { MacroTrendsPanel } from './components/MacroTrendsPanel';
 import { NicheTrendsPanel } from './components/NicheTrendsPanel';
 import { StrategyPanel } from './components/StrategyPanel';
+import { InstagramInsightsPanel } from './components/InstagramInsightsPanel';
+import { TikTokInsightsPanel } from './components/TikTokInsightsPanel';
 import { getTrendsByLayer } from '@/app/actions/trends';
 import { getUserNicheTrends, getStrategicInsights } from '@/app/actions/user-trends';
+import { getInstagramInsights, getTopInstagramPosts } from '@/app/actions/instagram';
 import { requireAuth, getCurrentUser } from '@/lib/auth';
 import Link from 'next/link';
 import { Sparkles } from 'lucide-react';
@@ -15,11 +18,14 @@ export default async function DashboardPage() {
     throw new Error('User not found');
   }
 
-  const [macroTrends, nicheTrends, strategicInsights] = await Promise.all([
-    getTrendsByLayer('macro'),
-    getUserNicheTrends(user.id),
-    getStrategicInsights(user.id),
-  ]);
+  const [macroTrends, nicheTrends, strategicInsights, instagramInsights, instagramTopPosts] =
+    await Promise.all([
+      getTrendsByLayer('macro'),
+      getUserNicheTrends(user.id),
+      getStrategicInsights(user.id),
+      getInstagramInsights(user.id),
+      getTopInstagramPosts(user.id, 10),
+    ]);
 
   return (
     <div className="min-h-screen bg-cream">
@@ -40,6 +46,27 @@ export default async function DashboardPage() {
             Open OwnVoice AI Lab
           </Link>
         </header>
+
+        {/* Social Media Insights - Top Section */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+          {/* Instagram Panel */}
+          <InstagramInsightsPanel
+            userId={user.id}
+            instagramUsername={user.instagram_username}
+            instagramConnectedAt={user.instagram_connected_at}
+            instagramLastSynced={user.instagram_last_synced_at}
+            insights={instagramInsights}
+            topPosts={instagramTopPosts}
+          />
+
+          {/* TikTok Panel */}
+          <TikTokInsightsPanel
+            userId={user.id}
+            tiktokUsername={null}
+            tiktokConnectedAt={null}
+            tiktokLastSynced={null}
+          />
+        </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <MacroTrendsPanel initialTrends={macroTrends} />

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { Send, Bot, User } from 'lucide-react';
+import { Send, Bot, User, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Card } from '@/components/ui/card';
@@ -20,32 +20,86 @@ interface WorkflowContext {
   brandVoice?: string;
 }
 
-interface Props {
-  context: WorkflowContext;
-}
-
 interface Message {
   role: 'user' | 'assistant' | 'system';
   content: string;
 }
 
-export function WorkflowChatInterface({ context }: Props) {
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      role: 'system',
-      content: `I'm your AI assistant for this workflow. I have access to:
-- Project: ${context.projectName}
-- Trend: ${context.trendTitle}
-- Current Phase: ${context.currentPhase}
-- Your Products: ${context.products.length} available
-- Case Studies: ${context.caseStudies.length} available
+interface Props {
+  context: WorkflowContext;
+  messages?: Message[];
+  onMessagesChange?: (messages: Message[]) => void;
+}
 
-Ask me anything to help with your content creation!`,
-    },
-  ]);
+// Dynamic prompt suggestions based on phase and state
+function getSuggestedPrompts(phase: number, phaseData: any): string[] {
+  const hasPhase2Data = phaseData?.phase2?.script;
+
+  if (phase === 1) {
+    return [
+      'Which format works best for this trend?',
+      'Help me pick the right tone',
+      'Should I link this to a product?',
+    ];
+  }
+
+  if (phase === 2 && !hasPhase2Data) {
+    return [
+      'What should I focus on for this content?',
+      'How can I make the hook stronger?',
+      'Any tips before I generate?',
+    ];
+  }
+
+  if (phase === 2 && hasPhase2Data) {
+    return [
+      'Make the hooks more provocative',
+      'The script feels too long, shorten it',
+      'Add more storytelling to the script',
+      'Make the tone more casual',
+    ];
+  }
+
+  if (phase === 3) {
+    return [
+      'Check if my claims are accurate',
+      'Does this match my brand voice?',
+      'Any compliance concerns?',
+    ];
+  }
+
+  return [
+    'Help me with this phase',
+    'What should I do next?',
+  ];
+}
+
+export function WorkflowChatInterface({ context, messages: externalMessages, onMessagesChange }: Props) {
+  // Use external state if provided, otherwise use internal
+  const [internalMessages, setInternalMessages] = useState<Message[]>([]);
+  const messages = externalMessages || internalMessages;
+  const setMessages = (updater: Message[] | ((prev: Message[]) => Message[])) => {
+    if (onMessagesChange) {
+      if (typeof updater === 'function') {
+        onMessagesChange(updater(messages));
+      } else {
+        onMessagesChange(updater);
+      }
+    } else {
+      if (typeof updater === 'function') {
+        setInternalMessages(updater);
+      } else {
+        setInternalMessages(updater);
+      }
+    }
+  };
+
   const [input, setInput] = useState('');
   const [isStreaming, setIsStreaming] = useState(false);
+  const [showSuggestions, setShowSuggestions] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const suggestedPrompts = getSuggestedPrompts(context.currentPhase, context.phaseData);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -55,11 +109,19 @@ Ask me anything to help with your content creation!`,
     scrollToBottom();
   }, [messages]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!input.trim() || isStreaming) return;
+  // Hide suggestions after first user message
+  useEffect(() => {
+    if (messages.some((m) => m.role === 'user')) {
+      setShowSuggestions(false);
+    }
+  }, [messages]);
 
-    const userMessage: Message = { role: 'user', content: input };
+  const handleSubmit = async (e?: React.FormEvent, overrideInput?: string) => {
+    e?.preventDefault();
+    const query = overrideInput || input.trim();
+    if (!query || isStreaming) return;
+
+    const userMessage: Message = { role: 'user', content: query };
     setMessages((prev) => [...prev, userMessage]);
     setInput('');
     setIsStreaming(true);
@@ -71,7 +133,7 @@ Ask me anything to help with your content creation!`,
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          query: input,
+          query,
           context,
           conversationHistory: messages.filter(m => m.role !== 'system'),
         }),
@@ -82,7 +144,6 @@ Ask me anything to help with your content creation!`,
 
       if (!reader) throw new Error('No reader');
 
-      // Add assistant message placeholder
       setMessages((prev) => [...prev, { role: 'assistant', content: '' }]);
 
       while (true) {
@@ -127,8 +188,13 @@ Ask me anything to help with your content creation!`,
     }
   };
 
+  const handleSuggestionClick = (prompt: string) => {
+    setShowSuggestions(false);
+    handleSubmit(undefined, prompt);
+  };
+
   return (
-    <Card className="bg-white rounded-3xl shadow-soft flex flex-col h-[calc(100vh-280px)] sticky top-8">
+    <Card className="bg-white rounded-3xl shadow-soft flex flex-col h-[500px]">
       {/* Header */}
       <div className="p-4 border-b border-sage/10">
         <div className="flex items-center gap-2">
@@ -136,12 +202,31 @@ Ask me anything to help with your content creation!`,
           <h3 className="font-semibold text-sage">AI Assistant</h3>
         </div>
         <p className="text-xs text-sage/60 mt-1">
-          Phase {context.currentPhase} - Ask me anything
+          Phase {context.currentPhase} — Ask me anything
         </p>
       </div>
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        {/* Empty state with suggestions */}
+        {messages.length === 0 && showSuggestions && (
+          <div className="space-y-3 pt-2">
+            <div className="flex items-center gap-2 text-sage/50 mb-3">
+              <Sparkles className="w-4 h-4" />
+              <p className="text-xs font-medium">Try asking</p>
+            </div>
+            {suggestedPrompts.map((prompt, idx) => (
+              <button
+                key={idx}
+                onClick={() => handleSuggestionClick(prompt)}
+                className="w-full text-left px-4 py-3 rounded-2xl border border-sage/10 text-sm text-sage/70 hover:border-sage/30 hover:bg-sage/[0.02] transition-all"
+              >
+                {prompt}
+              </button>
+            ))}
+          </div>
+        )}
+
         {messages.map((message, idx) => (
           <div
             key={idx}
@@ -150,13 +235,13 @@ Ask me anything to help with your content creation!`,
             }`}
           >
             {message.role === 'assistant' && (
-              <div className="w-8 h-8 rounded-full bg-sage/10 flex items-center justify-center flex-shrink-0">
-                <Bot className="w-4 h-4 text-sage" />
+              <div className="w-7 h-7 rounded-full bg-sage/10 flex items-center justify-center flex-shrink-0">
+                <Bot className="w-3.5 h-3.5 text-sage" />
               </div>
             )}
 
             <div
-              className={`rounded-2xl px-4 py-3 max-w-[85%] ${
+              className={`rounded-2xl px-4 py-2.5 max-w-[85%] ${
                 message.role === 'user'
                   ? 'bg-sage text-cream'
                   : message.role === 'system'
@@ -170,12 +255,32 @@ Ask me anything to help with your content creation!`,
             </div>
 
             {message.role === 'user' && (
-              <div className="w-8 h-8 rounded-full bg-dusty-rose/10 flex items-center justify-center flex-shrink-0">
-                <User className="w-4 h-4 text-dusty-rose" />
+              <div className="w-7 h-7 rounded-full bg-dusty-rose/10 flex items-center justify-center flex-shrink-0">
+                <User className="w-3.5 h-3.5 text-dusty-rose" />
               </div>
             )}
           </div>
         ))}
+
+        {/* Post-conversation suggestions (after assets generated) */}
+        {!isStreaming && messages.length > 0 && messages.length < 6 && context.phaseData?.phase2?.script && (
+          <div className="pt-2">
+            <div className="flex flex-wrap gap-2">
+              {getSuggestedPrompts(context.currentPhase, context.phaseData)
+                .slice(0, 2)
+                .map((prompt, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => handleSuggestionClick(prompt)}
+                    className="px-3 py-1.5 rounded-full border border-sage/15 text-xs text-sage/60 hover:border-sage/30 hover:text-sage/80 transition-all"
+                  >
+                    {prompt}
+                  </button>
+                ))}
+            </div>
+          </div>
+        )}
+
         <div ref={messagesEndRef} />
       </div>
 

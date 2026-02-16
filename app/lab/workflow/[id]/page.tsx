@@ -6,7 +6,9 @@ import { WorkflowStepper } from '@/components/workflow/WorkflowStepper';
 import { Phase1ContextualBrief } from '@/components/workflow/Phase1ContextualBrief';
 import { Phase2AssetOrchestration } from '@/components/workflow/Phase2AssetOrchestration';
 import { WorkflowChatInterface } from '@/components/workflow/WorkflowChatInterface';
+import { WorkflowNotes } from '@/components/workflow/WorkflowNotes';
 import { getWorkflow, getUserProducts, getUserCaseStudies, updateWorkflowPhase } from '@/app/actions/workflows';
+import { getWorkflowCollaborationNotes } from '@/app/actions/collaboration';
 import { requireAuth, getCurrentUser } from '@/lib/auth';
 import { Loader2, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
@@ -20,8 +22,10 @@ export default function WorkflowPage() {
   const [user, setUser] = useState<any>(null);
   const [products, setProducts] = useState<any[]>([]);
   const [caseStudies, setCaseStudies] = useState<any[]>([]);
+  const [notes, setNotes] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [currentPhase, setCurrentPhase] = useState(1);
+  const [chatMessages, setChatMessages] = useState<Array<{ role: 'user' | 'assistant' | 'system'; content: string }>>([]);
 
   useEffect(() => {
     loadWorkflow();
@@ -37,10 +41,11 @@ export default function WorkflowPage() {
 
       setUser(currentUser);
 
-      const [workflowData, productsData, caseStudiesData] = await Promise.all([
+      const [workflowData, productsData, caseStudiesData, notesData] = await Promise.all([
         getWorkflow(workflowId, currentUser.id),
         getUserProducts(currentUser.id),
         getUserCaseStudies(currentUser.id),
+        getWorkflowCollaborationNotes(workflowId),
       ]);
 
       if (!workflowData) {
@@ -52,6 +57,7 @@ export default function WorkflowPage() {
       setCurrentPhase(workflowData.current_phase);
       setProducts(productsData);
       setCaseStudies(caseStudiesData);
+      setNotes(notesData);
     } catch (error) {
       console.error('Failed to load workflow:', error);
       router.push('/dashboard');
@@ -99,6 +105,15 @@ export default function WorkflowPage() {
       });
     } catch (error: any) {
       alert(error.message || 'Failed to save phase data');
+    }
+  };
+
+  const handleNotesChange = async () => {
+    try {
+      const notesData = await getWorkflowCollaborationNotes(workflowId);
+      setNotes(notesData);
+    } catch (error) {
+      console.error('Failed to reload notes:', error);
     }
   };
 
@@ -194,6 +209,9 @@ export default function WorkflowPage() {
                 brandStyle={user.brand_style_prompt}
                 onComplete={handlePhase2Complete}
                 initialData={workflow.phase_data?.phase2}
+                chatMessages={chatMessages}
+                creatorFaceUrl={user.creator_face_url}
+                creatorVoiceUrl={user.creator_voice_url}
               />
             )}
 
@@ -220,9 +238,19 @@ export default function WorkflowPage() {
             )}
           </div>
 
-          {/* Right Side: AI Assistant Chat (1/3 width) */}
-          <div className="lg:col-span-1">
-            <WorkflowChatInterface context={workflowContext} />
+          {/* Right Side: AI Assistant + Notes (1/3 width) */}
+          <div className="lg:col-span-1 space-y-6">
+            <WorkflowChatInterface
+              context={workflowContext}
+              messages={chatMessages}
+              onMessagesChange={setChatMessages}
+            />
+            <WorkflowNotes
+              workflowId={workflowId}
+              notes={notes}
+              currentUserId={user.id}
+              onNotesChange={handleNotesChange}
+            />
           </div>
         </div>
       </div>

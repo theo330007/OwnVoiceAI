@@ -1,34 +1,81 @@
 'use server';
 
 import { createClient } from '@/lib/supabase';
-import { requireAuth } from '@/lib/auth';
-import type {
-  Project,
-  CreateProjectInput,
-  UpdateProjectInput,
-} from '@/lib/types/project';
 import { revalidatePath } from 'next/cache';
+import { getCurrentUser } from '@/lib/auth';
 
-export async function getUserProjects(): Promise<Project[]> {
-  const user = await requireAuth();
+export interface Project {
+  id: string;
+  user_id: string;
+  workflow_id: string | null;
+  strategic_insight_id: string | null;
+  title: string;
+  description: string | null;
+  content_type: 'educational' | 'behind_the_scenes' | 'promotional' | 'interactive';
+  trend_title: string | null;
+  status: 'in_progress' | 'completed' | 'archived';
+  current_phase: 'ideation' | 'drafting' | 'editing' | 'ready' | 'published';
+  completion_percentage: number;
+  hook: string | null;
+  concept: string | null;
+  cta: string | null;
+  final_content: string | null;
+  media_urls: string[] | null;
+  scheduled_date: string | null;
+  published_at: string | null;
+  published_url: string | null;
+  metadata: any;
+  created_at: string;
+  updated_at: string;
+  completed_at: string | null;
+}
+
+export interface ProjectNote {
+  id: string;
+  project_id: string;
+  user_id: string;
+  note_type: 'general' | 'feedback' | 'revision' | 'idea';
+  content: string;
+  created_at: string;
+  updated_at: string;
+}
+
+/**
+ * Get all projects for the current user
+ */
+export async function getUserProjects(status?: 'in_progress' | 'completed' | 'archived') {
+  const user = await getCurrentUser();
+
+  if (!user) {
+    throw new Error('User not authenticated');
+  }
+
   const supabase = await createClient();
 
-  const { data, error } = await supabase
-    .from('projects')
-    .select('*')
-    .eq('user_id', user.id)
-    .order('updated_at', { ascending: false });
+  const { data, error } = await supabase.rpc('get_user_projects', {
+    p_user_id: user.id,
+    p_status: status || null,
+    limit_count: 50,
+  });
 
   if (error) {
     console.error('Error fetching projects:', error);
     return [];
   }
 
-  return data as Project[];
+  return data as (Project & { notes_count: number })[];
 }
 
-export async function getProjectById(projectId: string): Promise<Project | null> {
-  const user = await requireAuth();
+/**
+ * Get a single project by ID
+ */
+export async function getProject(projectId: string) {
+  const user = await getCurrentUser();
+
+  if (!user) {
+    throw new Error('User not authenticated');
+  }
+
   const supabase = await createClient();
 
   const { data, error } = await supabase
@@ -46,51 +93,75 @@ export async function getProjectById(projectId: string): Promise<Project | null>
   return data as Project;
 }
 
-export async function createProject(input: CreateProjectInput) {
-  const user = await requireAuth();
+/**
+ * Get project statistics
+ */
+export async function getProjectStats() {
+  const user = await getCurrentUser();
+
+  if (!user) {
+    throw new Error('User not authenticated');
+  }
+
   const supabase = await createClient();
 
-  const { data, error } = await supabase
-    .from('projects')
-    .insert({
-      user_id: user.id,
-      title: input.title,
-      description: input.description || null,
-      selected_trends: input.selected_trends || [],
-      status: 'draft',
-      current_step: 'setup',
-    })
-    .select()
-    .single();
+  const { data, error } = await supabase.rpc('get_user_project_stats', {
+    p_user_id: user.id,
+  });
 
   if (error) {
-    throw new Error(`Failed to create project: ${error.message}`);
+    console.error('Error fetching project stats:', error);
+    return null;
   }
 
-  revalidatePath('/projects');
-  return data as Project;
+  return data?.[0] || {
+    total_projects: 0,
+    in_progress_projects: 0,
+    completed_projects: 0,
+    avg_completion_percentage: 0,
+  };
 }
 
-export async function updateProject(projectId: string, input: UpdateProjectInput) {
-  const user = await requireAuth();
+/**
+ * Update project details
+ */
+export async function updateProject(
+  projectId: string,
+  updates: Partial<{
+    title: string;
+    description: string;
+    status: 'in_progress' | 'completed' | 'archived';
+    current_phase: 'ideation' | 'drafting' | 'editing' | 'ready' | 'published';
+    completion_percentage: number;
+    hook: string;
+    concept: string;
+    cta: string;
+    final_content: string;
+    media_urls: string[];
+    scheduled_date: string;
+    published_at: string;
+    published_url: string;
+  }>
+) {
+  const user = await getCurrentUser();
+
+  if (!user) {
+    throw new Error('User not authenticated');
+  }
+
   const supabase = await createClient();
 
-  // Verify ownership
-  const { data: existingProject } = await supabase
-    .from('projects')
-    .select('id')
-    .eq('id', projectId)
-    .eq('user_id', user.id)
-    .single();
-
-  if (!existingProject) {
-    throw new Error('Project not found or unauthorized');
+  // Set completed_at if status is being changed to completed
+  const updateData: any = { ...updates };
+  if (updates.status === 'completed' && updates.completion_percentage === 100) {
+    updateData.completed_at = new Date().toISOString();
   }
 
   const { data, error } = await supabase
     .from('projects')
-    .update(input)
+    .update(updateData)
     .eq('id', projectId)
+    .eq('user_id', user.id)
     .select()
     .single();
 
@@ -100,11 +171,114 @@ export async function updateProject(projectId: string, input: UpdateProjectInput
 
   revalidatePath('/projects');
   revalidatePath(`/projects/${projectId}`);
+
   return data as Project;
 }
 
+/**
+ * Add a note to a project
+ */
+export async function addProjectNote(
+  projectId: string,
+  content: string,
+  noteType: 'general' | 'feedback' | 'revision' | 'idea' = 'general'
+) {
+  const user = await getCurrentUser();
+
+  if (!user) {
+    throw new Error('User not authenticated');
+  }
+
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from('project_notes')
+    .insert({
+      project_id: projectId,
+      user_id: user.id,
+      note_type: noteType,
+      content,
+    })
+    .select()
+    .single();
+
+  if (error) {
+    throw new Error(`Failed to add note: ${error.message}`);
+  }
+
+  revalidatePath(`/projects/${projectId}`);
+
+  return data as ProjectNote;
+}
+
+/**
+ * Get notes for a project
+ */
+export async function getProjectNotes(projectId: string) {
+  const user = await getCurrentUser();
+
+  if (!user) {
+    throw new Error('User not authenticated');
+  }
+
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from('project_notes')
+    .select('*')
+    .eq('project_id', projectId)
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error('Error fetching project notes:', error);
+    return [];
+  }
+
+  return data as ProjectNote[];
+}
+
+/**
+ * Delete a project note
+ */
+export async function deleteProjectNote(noteId: string) {
+  const user = await getCurrentUser();
+
+  if (!user) {
+    throw new Error('User not authenticated');
+  }
+
+  const supabase = await createClient();
+
+  const { error } = await supabase
+    .from('project_notes')
+    .delete()
+    .eq('id', noteId)
+    .eq('user_id', user.id);
+
+  if (error) {
+    throw new Error(`Failed to delete note: ${error.message}`);
+  }
+
+  revalidatePath('/projects');
+}
+
+/**
+ * Archive a project
+ */
+export async function archiveProject(projectId: string) {
+  return updateProject(projectId, { status: 'archived' });
+}
+
+/**
+ * Delete a project
+ */
 export async function deleteProject(projectId: string) {
-  const user = await requireAuth();
+  const user = await getCurrentUser();
+
+  if (!user) {
+    throw new Error('User not authenticated');
+  }
+
   const supabase = await createClient();
 
   const { error } = await supabase
@@ -118,27 +292,5 @@ export async function deleteProject(projectId: string) {
   }
 
   revalidatePath('/projects');
-}
-
-export async function getProjectStats() {
-  const user = await requireAuth();
-  const supabase = await createClient();
-
-  const { data, error } = await supabase
-    .from('projects')
-    .select('status')
-    .eq('user_id', user.id);
-
-  if (error) {
-    return { total: 0, active: 0, completed: 0, draft: 0 };
-  }
-
-  const stats = {
-    total: data.length,
-    active: data.filter((p) => p.status === 'active').length,
-    completed: data.filter((p) => p.status === 'completed').length,
-    draft: data.filter((p) => p.status === 'draft').length,
-  };
-
-  return stats;
+  revalidatePath('/dashboard');
 }
