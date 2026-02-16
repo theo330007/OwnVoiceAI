@@ -83,7 +83,7 @@ async function executeTool(functionCall: any) {
 export async function* validateContentIdea(userQuery: string) {
   const model = genAI.getGenerativeModel({
     model: 'gemini-2.0-flash-exp',
-    tools: [{ functionDeclarations: tools }],
+    tools: [{ functionDeclarations: tools as any }],
     systemInstruction: `You are OwnVoice AI, a boutique wellness content validation agent for wellness entrepreneurs.
 
 Your role is to help validate content ideas by:
