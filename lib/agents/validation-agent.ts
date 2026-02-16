@@ -1,6 +1,6 @@
 import {
   GoogleGenerativeAI,
-  FunctionDeclarationSchemaType,
+  SchemaType,
 } from '@google/generative-ai';
 import { vectorService } from '@/lib/services/vector.service';
 import { createClient } from '@/lib/supabase';
@@ -17,18 +17,18 @@ const tools = [
     description:
       'Search the scientific knowledge base for relevant research, studies, and scientific anchors related to wellness topics.',
     parameters: {
-      type: FunctionDeclarationSchemaType.OBJECT,
+      type: SchemaType.OBJECT,
       properties: {
         query: {
-          type: FunctionDeclarationSchemaType.STRING,
+          type: SchemaType.STRING,
           description: 'The search query to find relevant scientific information',
         },
         match_threshold: {
-          type: FunctionDeclarationSchemaType.NUMBER,
+          type: SchemaType.NUMBER,
           description: 'Similarity threshold (0-1). Default 0.7',
         },
         limit: {
-          type: FunctionDeclarationSchemaType.NUMBER,
+          type: SchemaType.NUMBER,
           description: 'Maximum number of results. Default 10',
         },
       },
@@ -40,15 +40,15 @@ const tools = [
     description:
       'Retrieve the latest wellness trends from both macro and niche layers.',
     parameters: {
-      type: FunctionDeclarationSchemaType.OBJECT,
+      type: SchemaType.OBJECT,
       properties: {
         layer: {
-          type: FunctionDeclarationSchemaType.STRING,
+          type: SchemaType.STRING,
           description: 'Which trend layer to retrieve: macro or niche',
           enum: ['macro', 'niche'],
         },
         limit: {
-          type: FunctionDeclarationSchemaType.NUMBER,
+          type: SchemaType.NUMBER,
           description: 'Number of trends to retrieve. Default 20',
         },
       },
