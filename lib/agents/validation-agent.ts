@@ -151,7 +151,7 @@ Be specific, actionable, and data-driven in your recommendations.`,
       );
 
       // Send function results back to model
-      result = await chat.sendMessageStream(functionResponses);
+      result = await chat.sendMessageStream(functionResponses as any);
 
       // Continue streaming the response
       for await (const responseChunk of result.stream) {
