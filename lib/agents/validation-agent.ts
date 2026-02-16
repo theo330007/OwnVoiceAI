@@ -69,7 +69,7 @@ async function executeTool(functionCall: any) {
   }
 
   if (name === 'get_latest_trends') {
-    const supabase = createClient();
+    const supabase = await createClient();
     const { data } = await supabase.rpc('get_latest_trends', {
       trend_layer: args.layer,
       limit_count: args.limit || 20,
