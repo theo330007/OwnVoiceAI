@@ -8,6 +8,7 @@ import { getUserNicheTrends, getStrategicInsights } from '@/app/actions/user-tre
 import { getInstagramInsights, getTopInstagramPosts } from '@/app/actions/instagram';
 import { requireAuth, getCurrentUser } from '@/lib/auth';
 import Link from 'next/link';
+import { redirect } from 'next/navigation';
 import { Sparkles } from 'lucide-react';
 
 export default async function DashboardPage() {
@@ -16,6 +17,13 @@ export default async function DashboardPage() {
 
   if (!user) {
     throw new Error('User not found');
+  }
+
+  // Redirect to onboarding if strategy profile is empty and onboarding not yet completed
+  const hasProfile = user.metadata?.strategy?.persona || user.metadata?.strategy?.niche;
+  const hasCompletedOnboarding = user.metadata?.onboarding?.completed_at;
+  if (!hasProfile && !hasCompletedOnboarding) {
+    redirect('/onboarding');
   }
 
   const [macroTrends, nicheTrends, strategicInsights, instagramInsights, instagramTopPosts] =

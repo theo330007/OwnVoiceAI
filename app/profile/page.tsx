@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase-browser';
-import { User, Mail, Save, Loader2, Briefcase, Building2, Globe, Target, Sparkles, Package, Users, Newspaper, Plus, X, Camera, Headphones, Upload } from 'lucide-react';
+import { User, Mail, Save, Loader2, Briefcase, Building2, Globe, Target, Sparkles, Package, Users, Newspaper, Plus, X, Camera, Headphones, Upload, Heart, Shield, Eye, MessageCircle, Lightbulb, Star } from 'lucide-react';
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -15,12 +15,24 @@ export default function ProfilePage() {
     industry: '',
     bio: '',
     website_url: '',
+    // Strategy fields
     persona: '',
     niche: '',
     positioning: '',
     offering: '',
     competitors: [] as string[],
     hot_news: '',
+    target_audience: '',
+    transformation: '',
+    core_belief: '',
+    opposition: '',
+    tone: '',
+    brand_words: [] as string[],
+    content_boundaries: '',
+    preferred_formats: [] as string[],
+    vision_statement: '',
+    offer_types: [] as string[],
+    offer_price: '',
   });
   const [newCompetitor, setNewCompetitor] = useState('');
   const [isEditing, setIsEditing] = useState(false);
@@ -48,7 +60,6 @@ export default function ProfilePage() {
         return;
       }
 
-      // Fetch user profile from users table
       const { data: profile, error: profileError } = await supabase
         .from('users')
         .select('*')
@@ -63,6 +74,7 @@ export default function ProfilePage() {
       setUser(profile);
       setCreatorFaceUrl(profile.creator_face_url || null);
       setCreatorVoiceUrl(profile.creator_voice_url || null);
+      const s = profile.metadata?.strategy || {};
       setFormData({
         name: profile.name || '',
         email: profile.email || '',
@@ -70,12 +82,23 @@ export default function ProfilePage() {
         industry: profile.industry || '',
         bio: profile.bio || '',
         website_url: profile.website_url || '',
-        persona: profile.persona || '',
-        niche: profile.niche || '',
-        positioning: profile.positioning || '',
-        offering: profile.offering || '',
-        competitors: profile.competitors || [],
-        hot_news: profile.hot_news || '',
+        persona: s.persona || '',
+        niche: s.niche || '',
+        positioning: s.positioning || '',
+        offering: s.offering || '',
+        competitors: s.competitors || profile.metadata?.competitors || [],
+        hot_news: s.hot_news || '',
+        target_audience: s.target_audience || '',
+        transformation: s.transformation || '',
+        core_belief: s.core_belief || '',
+        opposition: s.opposition || '',
+        tone: s.tone || '',
+        brand_words: s.brand_words || [],
+        content_boundaries: s.content_boundaries || '',
+        preferred_formats: s.preferred_formats || [],
+        vision_statement: s.vision_statement || '',
+        offer_types: s.offer_types || [],
+        offer_price: s.offer_price || '',
       });
     } catch (error) {
       console.error('Failed to load user:', error);
@@ -100,12 +123,28 @@ export default function ProfilePage() {
           industry: formData.industry || null,
           bio: formData.bio || null,
           website_url: formData.website_url || null,
-          persona: formData.persona || null,
-          niche: formData.niche || null,
-          positioning: formData.positioning || null,
-          offering: formData.offering || null,
-          competitors: formData.competitors,
-          hot_news: formData.hot_news || null,
+          metadata: {
+            ...(user.metadata || {}),
+            strategy: {
+              persona: formData.persona || null,
+              niche: formData.niche || null,
+              positioning: formData.positioning || null,
+              offering: formData.offering || null,
+              competitors: formData.competitors,
+              hot_news: formData.hot_news || null,
+              target_audience: formData.target_audience || null,
+              transformation: formData.transformation || null,
+              core_belief: formData.core_belief || null,
+              opposition: formData.opposition || null,
+              tone: formData.tone || null,
+              brand_words: formData.brand_words,
+              content_boundaries: formData.content_boundaries || null,
+              preferred_formats: formData.preferred_formats,
+              vision_statement: formData.vision_statement || null,
+              offer_types: formData.offer_types,
+              offer_price: formData.offer_price || null,
+            },
+          },
         })
         .eq('id', user.id);
 
@@ -113,8 +152,6 @@ export default function ProfilePage() {
 
       setMessage({ type: 'success', text: 'Profile updated successfully!' });
       setIsEditing(false);
-
-      // Reload user data
       await loadUser();
     } catch (error: any) {
       console.error('Failed to update profile:', error);
@@ -125,6 +162,7 @@ export default function ProfilePage() {
   };
 
   const handleCancel = () => {
+    const s = user.metadata?.strategy || {};
     setFormData({
       name: user.name || '',
       email: user.email || '',
@@ -132,12 +170,23 @@ export default function ProfilePage() {
       industry: user.industry || '',
       bio: user.bio || '',
       website_url: user.website_url || '',
-      persona: user.persona || '',
-      niche: user.niche || '',
-      positioning: user.positioning || '',
-      offering: user.offering || '',
-      competitors: user.competitors || [],
-      hot_news: user.hot_news || '',
+      persona: s.persona || '',
+      niche: s.niche || '',
+      positioning: s.positioning || '',
+      offering: s.offering || '',
+      competitors: s.competitors || user.metadata?.competitors || [],
+      hot_news: s.hot_news || '',
+      target_audience: s.target_audience || '',
+      transformation: s.transformation || '',
+      core_belief: s.core_belief || '',
+      opposition: s.opposition || '',
+      tone: s.tone || '',
+      brand_words: s.brand_words || [],
+      content_boundaries: s.content_boundaries || '',
+      preferred_formats: s.preferred_formats || [],
+      vision_statement: s.vision_statement || '',
+      offer_types: s.offer_types || [],
+      offer_price: s.offer_price || '',
     });
     setNewCompetitor('');
     setIsEditing(false);
@@ -152,17 +201,9 @@ export default function ProfilePage() {
       const ext = file.name.split('.').pop() || (type === 'face' ? 'jpg' : 'mp3');
       const filePath = `${user.id}/${type}.${ext}`;
 
-      console.log('Uploading to:', filePath, 'File size:', file.size, 'Type:', file.type);
-
-      // List buckets to debug
-      const { data: buckets, error: bucketsError } = await supabase.storage.listBuckets();
-      console.log('Available buckets:', buckets, 'Error:', bucketsError);
-
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from('creator-assets')
         .upload(filePath, file, { upsert: true });
-
-      console.log('Upload result:', uploadData, 'Error:', uploadError);
 
       if (uploadError) throw uploadError;
 
@@ -170,7 +211,6 @@ export default function ProfilePage() {
         .from('creator-assets')
         .getPublicUrl(filePath);
 
-      // Add cache-busting param
       const urlWithCacheBust = `${publicUrl}?t=${Date.now()}`;
 
       const column = type === 'face' ? 'creator_face_url' : 'creator_voice_url';
@@ -201,348 +241,260 @@ export default function ProfilePage() {
     );
   }
 
-  const inputClass = "w-full px-4 py-3 rounded-2xl border border-sage/20 focus:border-sage focus:outline-none focus:ring-2 focus:ring-sage/20 transition-all disabled:bg-sage/5 disabled:cursor-not-allowed";
+  const inputClass = "w-full px-4 py-3 rounded-2xl border border-sage/20 focus:border-sage focus:outline-none focus:ring-2 focus:ring-sage/20 transition-all disabled:bg-transparent disabled:border-transparent disabled:px-0 disabled:py-1";
   const textareaClass = `${inputClass} resize-none`;
+
+  // Read-only text display vs editable input
+  const ReadableField = ({ label, icon: Icon, value, placeholder, type = 'text', rows, onChange }: {
+    label: string; icon: any; value: string; placeholder: string; type?: string; rows?: number;
+    onChange: (val: string) => void;
+  }) => (
+    <div>
+      <label className="flex items-center gap-2 text-xs font-semibold text-sage/50 uppercase tracking-wider mb-2">
+        <Icon className="w-3.5 h-3.5" /> {label}
+      </label>
+      {isEditing ? (
+        rows ? (
+          <textarea value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} rows={rows} className={textareaClass} />
+        ) : (
+          <input type={type} value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} className={inputClass} />
+        )
+      ) : (
+        <p className={`text-sage leading-relaxed ${!value ? 'text-sage/30 italic text-sm' : ''}`}>
+          {value || placeholder}
+        </p>
+      )}
+    </div>
+  );
+
+  const TagList = ({ items, color = 'sage' }: { items: string[]; color?: string }) => (
+    <div className="flex flex-wrap gap-2">
+      {items.length > 0 ? items.map((item, idx) => (
+        <span key={idx} className={`px-3 py-1.5 ${color === 'rose' ? 'bg-dusty-rose/10 text-dusty-rose' : 'bg-sage/10 text-sage'} text-sm font-medium rounded-full`}>
+          {item}
+        </span>
+      )) : (
+        <span className="text-sm text-sage/30 italic">Not set</span>
+      )}
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-cream py-12 px-6">
-      <div className="max-w-5xl mx-auto">
-        {/* Header with actions */}
-        <div className="flex items-center justify-between mb-8">
+      <div className="max-w-6xl mx-auto">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-10">
           <div>
             <h1 className="font-serif text-4xl text-sage mb-2">My Profile</h1>
-            <p className="text-sage/70">Manage your account and strategy</p>
+            <p className="text-sage/60">Manage your account and brand strategy</p>
           </div>
           <div className="flex gap-3">
             {isEditing ? (
               <>
-                <button
-                  onClick={handleCancel}
-                  disabled={isSaving}
-                  className="px-6 py-2.5 border border-sage/20 hover:border-sage/40 text-sage font-medium rounded-2xl transition-colors disabled:opacity-50"
-                >
+                <button onClick={handleCancel} disabled={isSaving} className="px-6 py-2.5 border border-sage/20 hover:border-sage/40 text-sage font-medium rounded-2xl transition-colors disabled:opacity-50">
                   Cancel
                 </button>
-                <button
-                  onClick={handleSave}
-                  disabled={isSaving || !formData.name.trim()}
-                  className="flex items-center gap-2 px-6 py-2.5 bg-sage hover:bg-sage/90 text-cream font-medium rounded-2xl transition-colors disabled:opacity-50"
-                >
+                <button onClick={handleSave} disabled={isSaving || !formData.name.trim()} className="flex items-center gap-2 px-6 py-2.5 bg-sage hover:bg-sage/90 text-cream font-medium rounded-2xl transition-colors disabled:opacity-50">
                   {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                   Save
                 </button>
               </>
             ) : (
-              <button
-                onClick={() => setIsEditing(true)}
-                className="px-6 py-2.5 bg-sage hover:bg-sage/90 text-cream font-medium rounded-2xl transition-colors"
-              >
+              <button onClick={() => setIsEditing(true)} className="px-6 py-2.5 bg-sage hover:bg-sage/90 text-cream font-medium rounded-2xl transition-colors">
                 Edit Profile
               </button>
             )}
           </div>
         </div>
 
-        {/* Message */}
         {message && (
           <div className={`rounded-2xl px-4 py-3 mb-6 ${message.type === 'success' ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'}`}>
             <p className={`text-sm ${message.type === 'success' ? 'text-green-800' : 'text-red-800'}`}>{message.text}</p>
           </div>
         )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left Column - Profile Info */}
-          <div className="lg:col-span-1 space-y-6">
-            {/* Avatar Card */}
-            <div className="bg-white rounded-3xl shadow-soft p-6 text-center">
-              <div className="w-24 h-24 bg-dusty-rose rounded-full flex items-center justify-center mx-auto mb-4">
-                <span className="text-white font-serif text-4xl">
-                  {formData.name.charAt(0).toUpperCase() || 'U'}
-                </span>
-              </div>
-              <h2 className="font-serif text-2xl text-sage">{formData.name || 'User'}</h2>
-              <p className="text-sage/60 text-sm mt-1">{formData.email}</p>
+        {/* Top Row: Profile Summary + Creator Assets */}
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-6">
+          {/* Profile Card */}
+          <div className="bg-white rounded-3xl shadow-soft p-6 flex items-center gap-5">
+            <div className="w-20 h-20 bg-dusty-rose rounded-full flex items-center justify-center shrink-0">
+              <span className="text-white font-serif text-3xl">{formData.name.charAt(0).toUpperCase() || 'U'}</span>
+            </div>
+            <div className="min-w-0">
+              <h2 className="font-serif text-2xl text-sage truncate">{formData.name || 'User'}</h2>
+              <p className="text-sage/50 text-sm truncate">{formData.email}</p>
               {formData.niche && (
-                <span className="inline-block mt-3 px-3 py-1 bg-dusty-rose/10 text-dusty-rose text-xs font-medium rounded-full">
+                <span className="inline-block mt-2 px-3 py-1 bg-dusty-rose/10 text-dusty-rose text-xs font-medium rounded-full">
                   {formData.niche}
                 </span>
               )}
             </div>
+          </div>
 
-            {/* Account Info Card */}
-            <div className="bg-white rounded-3xl shadow-soft p-6">
-              <h3 className="font-medium text-sage mb-4 text-sm uppercase tracking-wide">Account</h3>
-              <div className="space-y-3 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-sage/60">Member since</span>
-                  <span className="text-sage font-medium">
-                    {new Date(user.created_at).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sage/60">Subscription</span>
-                  <span className="text-sage font-medium capitalize">{user.subscription_tier || 'Free'}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sage/60">Account ID</span>
-                  <span className="text-sage font-mono text-xs">{user.id.slice(0, 8)}...</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Creator Assets Card */}
-            <div className="bg-white rounded-3xl shadow-soft p-6">
-              <h3 className="font-medium text-sage mb-4 text-sm uppercase tracking-wide">
-                <div className="flex items-center gap-2">
-                  <Camera className="w-4 h-4" />
-                  Creator Assets
-                </div>
-              </h3>
-              <p className="text-xs text-sage/50 mb-4">Upload your face and voice to quickly use them in content workflows</p>
-
-              <div className="space-y-4">
-                {/* Face Upload */}
-                <div>
-                  <label className="text-xs font-medium text-sage/70 mb-2 block">My Face</label>
-                  <div className="flex items-center gap-3">
-                    {creatorFaceUrl ? (
-                      <img src={creatorFaceUrl} alt="Creator face" className="w-16 h-16 rounded-full object-cover border-2 border-sage/10" />
-                    ) : (
-                      <div className="w-16 h-16 rounded-full bg-sage/5 border-2 border-dashed border-sage/15 flex items-center justify-center">
-                        <User className="w-6 h-6 text-sage/25" />
-                      </div>
-                    )}
-                    <div className="flex-1">
-                      <button
-                        onClick={() => faceInputRef.current?.click()}
-                        disabled={isUploadingFace}
-                        className="flex items-center gap-2 px-3 py-2 bg-sage/10 hover:bg-sage/20 text-sage text-sm font-medium rounded-xl transition-colors disabled:opacity-50 w-full justify-center"
-                      >
-                        {isUploadingFace ? (
-                          <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Uploading...</>
-                        ) : (
-                          <><Upload className="w-3.5 h-3.5" /> {creatorFaceUrl ? 'Change Photo' : 'Upload Photo'}</>
-                        )}
-                      </button>
-                      <input
-                        ref={faceInputRef}
-                        type="file"
-                        accept="image/*"
-                        className="hidden"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (file) handleCreatorAssetUpload('face', file);
-                          e.target.value = '';
-                        }}
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Voice Upload */}
-                <div>
-                  <label className="text-xs font-medium text-sage/70 mb-2 block">My Voice</label>
-                  <div className="flex items-center gap-3">
-                    {creatorVoiceUrl ? (
-                      <div className="w-16 h-16 rounded-full bg-dusty-rose/10 border-2 border-dusty-rose/20 flex items-center justify-center flex-shrink-0">
-                        <Headphones className="w-6 h-6 text-dusty-rose" />
-                      </div>
-                    ) : (
-                      <div className="w-16 h-16 rounded-full bg-sage/5 border-2 border-dashed border-sage/15 flex items-center justify-center flex-shrink-0">
-                        <Headphones className="w-6 h-6 text-sage/25" />
-                      </div>
-                    )}
-                    <div className="flex-1 space-y-1.5">
-                      {creatorVoiceUrl && (
-                        <audio src={creatorVoiceUrl} controls className="w-full h-8 [&::-webkit-media-controls-panel]:bg-sage/5 [&::-webkit-media-controls-panel]:rounded-lg" />
-                      )}
-                      <button
-                        onClick={() => voiceInputRef.current?.click()}
-                        disabled={isUploadingVoice}
-                        className="flex items-center gap-2 px-3 py-2 bg-sage/10 hover:bg-sage/20 text-sage text-sm font-medium rounded-xl transition-colors disabled:opacity-50 w-full justify-center"
-                      >
-                        {isUploadingVoice ? (
-                          <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Uploading...</>
-                        ) : (
-                          <><Upload className="w-3.5 h-3.5" /> {creatorVoiceUrl ? 'Change Voice' : 'Upload Voice'}</>
-                        )}
-                      </button>
-                      <input
-                        ref={voiceInputRef}
-                        type="file"
-                        accept="audio/*"
-                        className="hidden"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (file) handleCreatorAssetUpload('voice', file);
-                          e.target.value = '';
-                        }}
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Competitors Card */}
-            <div className="bg-white rounded-3xl shadow-soft p-6">
-              <h3 className="font-medium text-sage mb-4 text-sm uppercase tracking-wide">
-                <div className="flex items-center gap-2">
-                  <Users className="w-4 h-4" />
-                  Concurrents
-                </div>
-              </h3>
-              {formData.competitors.length > 0 && (
-                <div className="space-y-2 mb-3">
-                  {formData.competitors.map((link, idx) => (
-                    <div key={idx} className="flex items-center gap-2 px-3 py-2 bg-sage/5 rounded-xl text-sm text-sage">
-                      <Globe className="w-3.5 h-3.5 text-sage/40 shrink-0" />
-                      <span className="truncate flex-1">{link}</span>
-                      {isEditing && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const updated = formData.competitors.filter((_, i) => i !== idx);
-                            setFormData({ ...formData, competitors: updated });
-                          }}
-                          className="text-sage/40 hover:text-red-500 transition-colors shrink-0"
-                        >
-                          <X className="w-3.5 h-3.5" />
-                        </button>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
-              {isEditing && (
-                <div className="flex gap-2">
-                  <input
-                    type="url"
-                    value={newCompetitor}
-                    onChange={(e) => setNewCompetitor(e.target.value)}
-                    placeholder="instagram.com/..."
-                    className="flex-1 px-3 py-2 rounded-xl border border-sage/20 focus:border-sage focus:outline-none text-sm"
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' && newCompetitor.trim()) {
-                        e.preventDefault();
-                        setFormData({ ...formData, competitors: [...formData.competitors, newCompetitor.trim()] });
-                        setNewCompetitor('');
-                      }
-                    }}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (newCompetitor.trim()) {
-                        setFormData({ ...formData, competitors: [...formData.competitors, newCompetitor.trim()] });
-                        setNewCompetitor('');
-                      }
-                    }}
-                    className="px-3 py-2 bg-sage/10 hover:bg-sage/20 text-sage rounded-xl transition-colors"
-                  >
-                    <Plus className="w-4 h-4" />
-                  </button>
-                </div>
-              )}
-              {!isEditing && formData.competitors.length === 0 && (
-                <p className="text-sm text-sage/40 italic">No competitors added yet</p>
-              )}
+          {/* Quick Stats */}
+          <div className="bg-white rounded-3xl shadow-soft p-6">
+            <h3 className="text-xs font-semibold text-sage/50 uppercase tracking-wider mb-3">Account</h3>
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between"><span className="text-sage/50">Since</span><span className="text-sage font-medium">{new Date(user.created_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}</span></div>
+              <div className="flex justify-between"><span className="text-sage/50">Plan</span><span className="text-sage font-medium capitalize">{user.subscription_tier || 'Free'}</span></div>
             </div>
           </div>
 
-          {/* Right Column - Forms */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* General Info Card */}
-            <div className="bg-white rounded-3xl shadow-soft p-6">
-              <h3 className="font-serif text-xl text-sage mb-5">General Information</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                <div>
-                  <label className="block text-sm font-medium text-sage mb-2">
-                    <div className="flex items-center gap-2"><User className="w-4 h-4" /> Full Name <span className="text-red-500">*</span></div>
-                  </label>
-                  <input type="text" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} disabled={!isEditing} className={inputClass} required />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-sage mb-2">
-                    <div className="flex items-center gap-2"><Mail className="w-4 h-4" /> Email</div>
-                  </label>
-                  <input type="email" value={formData.email} disabled className={`${inputClass} bg-sage/5 cursor-not-allowed`} />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-sage mb-2">
-                    <div className="flex items-center gap-2"><Building2 className="w-4 h-4" /> Business Name</div>
-                  </label>
-                  <input type="text" value={formData.business_name} onChange={(e) => setFormData({ ...formData, business_name: e.target.value })} disabled={!isEditing} placeholder="e.g., Fertile Ground Wellness" className={inputClass} />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-sage mb-2">
-                    <div className="flex items-center gap-2"><Briefcase className="w-4 h-4" /> Industry</div>
-                  </label>
-                  <select value={formData.industry} onChange={(e) => setFormData({ ...formData, industry: e.target.value })} disabled={!isEditing} className={inputClass}>
-                    <option value="">Select industry...</option>
-                    <option value="fertility">Fertility</option>
-                    <option value="nutrition">Nutrition</option>
-                    <option value="wellness">Wellness</option>
-                    <option value="fitness">Fitness</option>
-                    <option value="mentalhealth">Mental Health</option>
-                    <option value="motherhood">Motherhood</option>
-                    <option value="beauty">Beauty</option>
-                    <option value="health">Health</option>
-                  </select>
-                </div>
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-sage mb-2">
-                    <div className="flex items-center gap-2"><Globe className="w-4 h-4" /> Website URL</div>
-                  </label>
-                  <input type="url" value={formData.website_url} onChange={(e) => setFormData({ ...formData, website_url: e.target.value })} disabled={!isEditing} placeholder="https://yourwebsite.com" className={inputClass} />
-                </div>
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-sage mb-2">Bio</label>
-                  <textarea value={formData.bio} onChange={(e) => setFormData({ ...formData, bio: e.target.value })} disabled={!isEditing} placeholder="Tell us about yourself and your content goals..." rows={3} className={textareaClass} />
-                </div>
+          {/* Creator Assets */}
+          <div className="lg:col-span-2 bg-white rounded-3xl shadow-soft p-6">
+            <h3 className="text-xs font-semibold text-sage/50 uppercase tracking-wider mb-3 flex items-center gap-2"><Camera className="w-3.5 h-3.5" /> Creator Assets</h3>
+            <div className="flex gap-6">
+              <div className="flex items-center gap-3">
+                {creatorFaceUrl ? (
+                  <img src={creatorFaceUrl} alt="Face" className="w-12 h-12 rounded-full object-cover border-2 border-sage/10" />
+                ) : (
+                  <div className="w-12 h-12 rounded-full bg-sage/5 border-2 border-dashed border-sage/15 flex items-center justify-center">
+                    <User className="w-5 h-5 text-sage/25" />
+                  </div>
+                )}
+                <button onClick={() => faceInputRef.current?.click()} disabled={isUploadingFace} className="flex items-center gap-1.5 px-3 py-1.5 bg-sage/10 hover:bg-sage/20 text-sage text-xs font-medium rounded-xl transition-colors disabled:opacity-50">
+                  {isUploadingFace ? <><Loader2 className="w-3 h-3 animate-spin" /> Uploading</> : <><Upload className="w-3 h-3" /> {creatorFaceUrl ? 'Change' : 'Upload Face'}</>}
+                </button>
+                <input ref={faceInputRef} type="file" accept="image/*" className="hidden" onChange={(e) => { const file = e.target.files?.[0]; if (file) handleCreatorAssetUpload('face', file); e.target.value = ''; }} />
+              </div>
+              <div className="flex items-center gap-3">
+                {creatorVoiceUrl ? (
+                  <div className="w-12 h-12 rounded-full bg-dusty-rose/10 border-2 border-dusty-rose/20 flex items-center justify-center"><Headphones className="w-5 h-5 text-dusty-rose" /></div>
+                ) : (
+                  <div className="w-12 h-12 rounded-full bg-sage/5 border-2 border-dashed border-sage/15 flex items-center justify-center"><Headphones className="w-5 h-5 text-sage/25" /></div>
+                )}
+                <button onClick={() => voiceInputRef.current?.click()} disabled={isUploadingVoice} className="flex items-center gap-1.5 px-3 py-1.5 bg-sage/10 hover:bg-sage/20 text-sage text-xs font-medium rounded-xl transition-colors disabled:opacity-50">
+                  {isUploadingVoice ? <><Loader2 className="w-3 h-3 animate-spin" /> Uploading</> : <><Upload className="w-3 h-3" /> {creatorVoiceUrl ? 'Change' : 'Upload Voice'}</>}
+                </button>
+                <input ref={voiceInputRef} type="file" accept="audio/*" className="hidden" onChange={(e) => { const file = e.target.files?.[0]; if (file) handleCreatorAssetUpload('voice', file); e.target.value = ''; }} />
               </div>
             </div>
+          </div>
+        </div>
 
-            {/* Strategy Card */}
-            <div className="bg-white rounded-3xl shadow-soft p-6">
-              <div className="mb-5">
-                <h3 className="font-serif text-xl text-sage">Strategy Profile</h3>
-                <p className="text-sm text-sage/50 mt-1">Helps the AI understand your brand for better content</p>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                <div>
-                  <label className="block text-sm font-medium text-sage mb-2">
-                    <div className="flex items-center gap-2"><Sparkles className="w-4 h-4" /> Persona</div>
-                  </label>
-                  <textarea value={formData.persona} onChange={(e) => setFormData({ ...formData, persona: e.target.value })} disabled={!isEditing} placeholder="Your creator persona..." rows={4} className={textareaClass} />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-sage mb-2">
-                    <div className="flex items-center gap-2"><Package className="w-4 h-4" /> Offering</div>
-                  </label>
-                  <textarea value={formData.offering} onChange={(e) => setFormData({ ...formData, offering: e.target.value })} disabled={!isEditing} placeholder="Products, services, programs..." rows={4} className={textareaClass} />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-sage mb-2">
-                    <div className="flex items-center gap-2"><Target className="w-4 h-4" /> Niche</div>
-                  </label>
-                  <input type="text" value={formData.niche} onChange={(e) => setFormData({ ...formData, niche: e.target.value })} disabled={!isEditing} placeholder="e.g., Natural fertility & hormonal health" className={inputClass} />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-sage mb-2">
-                    <div className="flex items-center gap-2"><Briefcase className="w-4 h-4" /> Positionnement</div>
-                  </label>
-                  <input type="text" value={formData.positioning} onChange={(e) => setFormData({ ...formData, positioning: e.target.value })} disabled={!isEditing} placeholder="Your unique angle..." className={inputClass} />
-                </div>
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-sage mb-2">
-                    <div className="flex items-center gap-2"><Newspaper className="w-4 h-4" /> Hot News</div>
-                  </label>
-                  <textarea value={formData.hot_news} onChange={(e) => setFormData({ ...formData, hot_news: e.target.value })} disabled={!isEditing} placeholder="Current hot topics, news, or trends relevant to your audience..." rows={3} className={textareaClass} />
-                </div>
-              </div>
+        {/* General Info */}
+        <div className="bg-white rounded-3xl shadow-soft p-8 mb-6">
+          <h3 className="font-serif text-xl text-sage mb-6">General Information</h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <ReadableField label="Full Name" icon={User} value={formData.name} placeholder="Your name" onChange={(v) => setFormData({ ...formData, name: v })} />
+            <ReadableField label="Business Name" icon={Building2} value={formData.business_name} placeholder="Your brand name" onChange={(v) => setFormData({ ...formData, business_name: v })} />
+            <ReadableField label="Website" icon={Globe} value={formData.website_url} placeholder="https://..." type="url" onChange={(v) => setFormData({ ...formData, website_url: v })} />
+            <div className="md:col-span-3">
+              <ReadableField label="Bio" icon={User} value={formData.bio} placeholder="Tell us about yourself..." rows={2} onChange={(v) => setFormData({ ...formData, bio: v })} />
             </div>
+          </div>
+        </div>
+
+        {/* Strategy Profile — 2 column readable layout */}
+        <div className="bg-white rounded-3xl shadow-soft p-8 mb-6">
+          <div className="mb-8">
+            <h3 className="font-serif text-2xl text-sage">Strategy Profile</h3>
+            <p className="text-sage/50 mt-1">AI-generated from your onboarding answers</p>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-12 gap-y-8">
+            <ReadableField label="Persona" icon={Sparkles} value={formData.persona} placeholder="Your creator persona..." rows={3} onChange={(v) => setFormData({ ...formData, persona: v })} />
+            <ReadableField label="Positioning" icon={Target} value={formData.positioning} placeholder="Your unique angle..." rows={3} onChange={(v) => setFormData({ ...formData, positioning: v })} />
+            <ReadableField label="Niche" icon={Target} value={formData.niche} placeholder="Your niche..." onChange={(v) => setFormData({ ...formData, niche: v })} />
+            <ReadableField label="Offering" icon={Package} value={formData.offering} placeholder="Your core offer..." rows={2} onChange={(v) => setFormData({ ...formData, offering: v })} />
+          </div>
+        </div>
+
+        {/* Audience & Transformation */}
+        <div className="bg-white rounded-3xl shadow-soft p-8 mb-6">
+          <div className="mb-8">
+            <h3 className="font-serif text-2xl text-sage">Audience & Transformation</h3>
+            <p className="text-sage/50 mt-1">Who you serve and what you promise</p>
+          </div>
+
+          <div className="space-y-8">
+            <ReadableField label="Target Audience" icon={Users} value={formData.target_audience} placeholder="Who is your ideal client?" rows={3} onChange={(v) => setFormData({ ...formData, target_audience: v })} />
+            <ReadableField label="Transformation Promise" icon={Star} value={formData.transformation} placeholder="The before → after you deliver..." rows={2} onChange={(v) => setFormData({ ...formData, transformation: v })} />
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-12 gap-y-8">
+              <ReadableField label="Core Belief" icon={Heart} value={formData.core_belief} placeholder="Your strongest conviction..." rows={2} onChange={(v) => setFormData({ ...formData, core_belief: v })} />
+              <ReadableField label="What You Stand Against" icon={Shield} value={formData.opposition} placeholder="Industry norms you oppose..." rows={2} onChange={(v) => setFormData({ ...formData, opposition: v })} />
+            </div>
+
+            <ReadableField label="Vision Statement" icon={Lightbulb} value={formData.vision_statement} placeholder="Your mission in one powerful sentence..." rows={2} onChange={(v) => setFormData({ ...formData, vision_statement: v })} />
+          </div>
+        </div>
+
+        {/* Content DNA */}
+        <div className="bg-white rounded-3xl shadow-soft p-8 mb-6">
+          <div className="mb-8">
+            <h3 className="font-serif text-2xl text-sage">Content DNA</h3>
+            <p className="text-sage/50 mt-1">Your brand voice and content style</p>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-12 gap-y-8">
+            <ReadableField label="Tone" icon={MessageCircle} value={formData.tone} placeholder="e.g., Expert, warm, provocative..." onChange={(v) => setFormData({ ...formData, tone: v })} />
+            <div>
+              <label className="flex items-center gap-2 text-xs font-semibold text-sage/50 uppercase tracking-wider mb-2">
+                <Sparkles className="w-3.5 h-3.5" /> Brand Words
+              </label>
+              <TagList items={formData.brand_words} color="rose" />
+            </div>
+
+            <div>
+              <label className="flex items-center gap-2 text-xs font-semibold text-sage/50 uppercase tracking-wider mb-2">
+                <Eye className="w-3.5 h-3.5" /> Preferred Formats
+              </label>
+              <TagList items={formData.preferred_formats} />
+            </div>
+            <div>
+              <label className="flex items-center gap-2 text-xs font-semibold text-sage/50 uppercase tracking-wider mb-2">
+                <Package className="w-3.5 h-3.5" /> Offer Types
+              </label>
+              <TagList items={formData.offer_types} />
+            </div>
+
+            <ReadableField label="Content Boundaries" icon={Shield} value={formData.content_boundaries} placeholder="What you refuse to do..." rows={2} onChange={(v) => setFormData({ ...formData, content_boundaries: v })} />
+            <ReadableField label="Price Point" icon={Briefcase} value={formData.offer_price} placeholder="e.g., $297 USD" onChange={(v) => setFormData({ ...formData, offer_price: v })} />
+          </div>
+        </div>
+
+        {/* Competitors & Trends side by side */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Competitors */}
+          <div className="bg-white rounded-3xl shadow-soft p-8">
+            <h3 className="text-xs font-semibold text-sage/50 uppercase tracking-wider mb-4 flex items-center gap-2">
+              <Users className="w-3.5 h-3.5" /> Competitors / Inspiration
+            </h3>
+            {formData.competitors.length > 0 && (
+              <div className="space-y-2 mb-3">
+                {formData.competitors.map((link, idx) => (
+                  <div key={idx} className="flex items-center gap-2 px-3 py-2 bg-sage/5 rounded-xl text-sm text-sage">
+                    <Globe className="w-3.5 h-3.5 text-sage/40 shrink-0" />
+                    <span className="truncate flex-1">{link}</span>
+                    {isEditing && (
+                      <button type="button" onClick={() => setFormData({ ...formData, competitors: formData.competitors.filter((_, i) => i !== idx) })} className="text-sage/40 hover:text-red-500 transition-colors shrink-0">
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+            {isEditing && (
+              <div className="flex gap-2">
+                <input type="text" value={newCompetitor} onChange={(e) => setNewCompetitor(e.target.value)} placeholder="@handle or URL..."
+                  className="flex-1 px-3 py-2 rounded-xl border border-sage/20 focus:border-sage focus:outline-none text-sm"
+                  onKeyDown={(e) => { if (e.key === 'Enter' && newCompetitor.trim()) { e.preventDefault(); setFormData({ ...formData, competitors: [...formData.competitors, newCompetitor.trim()] }); setNewCompetitor(''); } }}
+                />
+                <button type="button" onClick={() => { if (newCompetitor.trim()) { setFormData({ ...formData, competitors: [...formData.competitors, newCompetitor.trim()] }); setNewCompetitor(''); } }} className="px-3 py-2 bg-sage/10 hover:bg-sage/20 text-sage rounded-xl transition-colors">
+                  <Plus className="w-4 h-4" />
+                </button>
+              </div>
+            )}
+            {!isEditing && formData.competitors.length === 0 && (
+              <p className="text-sm text-sage/30 italic">No competitors added yet</p>
+            )}
+          </div>
+
+          {/* Hot Topics */}
+          <div className="bg-white rounded-3xl shadow-soft p-8">
+            <ReadableField label="Trends & Hot Topics" icon={Newspaper} value={formData.hot_news} placeholder="Current topics relevant to your audience..." rows={4} onChange={(v) => setFormData({ ...formData, hot_news: v })} />
           </div>
         </div>
       </div>

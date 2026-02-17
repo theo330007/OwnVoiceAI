@@ -81,4 +81,5 @@ export interface UpdateUserInput {
   creator_voice_url?: string;
   subscription_tier?: 'free' | 'pro' | 'enterprise';
   is_active?: boolean;
+  metadata?: Record<string, any>;
 }

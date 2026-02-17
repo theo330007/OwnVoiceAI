@@ -70,10 +70,10 @@ export default function SignUpPage() {
         if (profile?.role === 'admin') {
           window.location.href = '/admin/dashboard';
         } else {
-          window.location.href = '/dashboard';
+          window.location.href = '/onboarding';
         }
       } else {
-        window.location.href = '/dashboard';
+        window.location.href = '/onboarding';
       }
     } catch (err: any) {
       setError(err.message || 'Failed to create account. Please try again.');
