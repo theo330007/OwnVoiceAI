@@ -12,7 +12,7 @@ export default function ProfilePage() {
     name: '',
     email: '',
     business_name: '',
-    industry: '',
+    industries: [] as string[],
     bio: '',
     website_url: '',
     // Strategy fields
@@ -35,6 +35,7 @@ export default function ProfilePage() {
     offer_price: '',
   });
   const [newCompetitor, setNewCompetitor] = useState('');
+  const [newIndustry, setNewIndustry] = useState('');
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -79,7 +80,7 @@ export default function ProfilePage() {
         name: profile.name || '',
         email: profile.email || '',
         business_name: profile.business_name || '',
-        industry: profile.industry || '',
+        industries: profile.metadata?.industries || (profile.industry ? [profile.industry] : []),
         bio: profile.bio || '',
         website_url: profile.website_url || '',
         persona: s.persona || '',
@@ -120,11 +121,12 @@ export default function ProfilePage() {
         .update({
           name: formData.name,
           business_name: formData.business_name || null,
-          industry: formData.industry || null,
+          industry: formData.industries[0] || null,
           bio: formData.bio || null,
           website_url: formData.website_url || null,
           metadata: {
             ...(user.metadata || {}),
+            industries: formData.industries,
             strategy: {
               persona: formData.persona || null,
               niche: formData.niche || null,
@@ -167,7 +169,7 @@ export default function ProfilePage() {
       name: user.name || '',
       email: user.email || '',
       business_name: user.business_name || '',
-      industry: user.industry || '',
+      industries: user.metadata?.industries || (user.industry ? [user.industry] : []),
       bio: user.bio || '',
       website_url: user.website_url || '',
       persona: s.persona || '',
@@ -189,6 +191,7 @@ export default function ProfilePage() {
       offer_price: s.offer_price || '',
     });
     setNewCompetitor('');
+    setNewIndustry('');
     setIsEditing(false);
     setMessage(null);
   };
@@ -294,7 +297,7 @@ export default function ProfilePage() {
                 <button onClick={handleCancel} disabled={isSaving} className="px-6 py-2.5 border border-sage/20 hover:border-sage/40 text-sage font-medium rounded-2xl transition-colors disabled:opacity-50">
                   Cancel
                 </button>
-                <button onClick={handleSave} disabled={isSaving || !formData.name.trim()} className="flex items-center gap-2 px-6 py-2.5 bg-sage hover:bg-sage/90 text-cream font-medium rounded-2xl transition-colors disabled:opacity-50">
+                <button onClick={handleSave} disabled={isSaving || !formData.name.trim() || formData.industries.length === 0} className="flex items-center gap-2 px-6 py-2.5 bg-sage hover:bg-sage/90 text-cream font-medium rounded-2xl transition-colors disabled:opacity-50">
                   {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                   Save
                 </button>
@@ -379,6 +382,79 @@ export default function ProfilePage() {
             <ReadableField label="Full Name" icon={User} value={formData.name} placeholder="Your name" onChange={(v) => setFormData({ ...formData, name: v })} />
             <ReadableField label="Business Name" icon={Building2} value={formData.business_name} placeholder="Your brand name" onChange={(v) => setFormData({ ...formData, business_name: v })} />
             <ReadableField label="Website" icon={Globe} value={formData.website_url} placeholder="https://..." type="url" onChange={(v) => setFormData({ ...formData, website_url: v })} />
+
+            {/* Industries — multi-tag, required */}
+            <div className={`md:col-span-3 rounded-2xl p-4 transition-colors ${formData.industries.length === 0 ? 'bg-red-50 border border-red-200' : 'bg-transparent'}`}>
+              <label className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider mb-1">
+                <Briefcase className={`w-3.5 h-3.5 ${formData.industries.length === 0 ? 'text-red-500' : 'text-sage/50'}`} />
+                <span className={formData.industries.length === 0 ? 'text-red-600' : 'text-sage/50'}>Industries</span>
+                <span className="text-red-500 font-bold">*</span>
+                {formData.industries.length === 0 && (
+                  <span className="ml-1 px-2 py-0.5 bg-red-100 text-red-600 text-[10px] font-semibold rounded-full uppercase tracking-wide">
+                    Required — enables trend scraping
+                  </span>
+                )}
+              </label>
+
+              {formData.industries.length > 0 && (
+                <div className="flex flex-wrap gap-2 mb-2 mt-2">
+                  {formData.industries.map((ind, idx) => (
+                    <span key={idx} className="flex items-center gap-1.5 px-3 py-1.5 bg-dusty-rose/10 text-dusty-rose text-sm font-medium rounded-full">
+                      {ind}
+                      {isEditing && (
+                        <button
+                          type="button"
+                          onClick={() => setFormData({ ...formData, industries: formData.industries.filter((_, i) => i !== idx) })}
+                          className="text-dusty-rose/50 hover:text-dusty-rose transition-colors"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      )}
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              {isEditing ? (
+                <div className="flex gap-2 mt-2">
+                  <input
+                    type="text"
+                    value={newIndustry}
+                    onChange={(e) => setNewIndustry(e.target.value)}
+                    placeholder="e.g. Wellness, Nutrition, Fitness..."
+                    className={`flex-1 px-3 py-2 rounded-xl border focus:outline-none text-sm transition-colors ${
+                      formData.industries.length === 0
+                        ? 'border-red-300 focus:border-red-400 focus:ring-2 focus:ring-red-100 bg-white'
+                        : 'border-sage/20 focus:border-sage'
+                    }`}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && newIndustry.trim()) {
+                        e.preventDefault();
+                        setFormData({ ...formData, industries: [...formData.industries, newIndustry.trim()] });
+                        setNewIndustry('');
+                      }
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (newIndustry.trim()) {
+                        setFormData({ ...formData, industries: [...formData.industries, newIndustry.trim()] });
+                        setNewIndustry('');
+                      }
+                    }}
+                    className="px-3 py-2 bg-sage/10 hover:bg-sage/20 text-sage rounded-xl transition-colors"
+                  >
+                    <Plus className="w-4 h-4" />
+                  </button>
+                </div>
+              ) : formData.industries.length === 0 ? (
+                <p className="text-red-400 italic text-sm mt-1">
+                  Add at least one industry to unlock trend scraping in your dashboard
+                </p>
+              ) : null}
+            </div>
+
             <div className="md:col-span-3">
               <ReadableField label="Bio" icon={User} value={formData.bio} placeholder="Tell us about yourself..." rows={2} onChange={(v) => setFormData({ ...formData, bio: v })} />
             </div>

@@ -25,10 +25,19 @@ interface Message {
   content: string;
 }
 
+type ContentUpdate = {
+  scene_update?: { index: number; visual: string; audio: string; assets?: any[] };
+  script?: { scenes: any[] };
+  hookVariations?: { type: string; hook: string }[];
+  bRollShotList?: { title: string; description: string; camera_angle: string; vibe_tag: string; duration: string }[];
+};
+
 interface Props {
   context: WorkflowContext;
   messages?: Message[];
   onMessagesChange?: (messages: Message[]) => void;
+  onContentUpdate?: (updates: ContentUpdate) => void;
+  currentContent?: { script?: any; hookVariations?: any[]; bRollShotList?: any[] };
 }
 
 // Dynamic prompt suggestions based on phase and state
@@ -74,7 +83,7 @@ function getSuggestedPrompts(phase: number, phaseData: any): string[] {
   ];
 }
 
-export function WorkflowChatInterface({ context, messages: externalMessages, onMessagesChange }: Props) {
+export function WorkflowChatInterface({ context, messages: externalMessages, onMessagesChange, onContentUpdate, currentContent }: Props) {
   // Use external state if provided, otherwise use internal
   const [internalMessages, setInternalMessages] = useState<Message[]>([]);
   const messages = externalMessages || internalMessages;
@@ -136,6 +145,7 @@ export function WorkflowChatInterface({ context, messages: externalMessages, onM
           query,
           context,
           conversationHistory: messages.filter(m => m.role !== 'system'),
+          currentContent: currentContent || null,
         }),
       });
 
@@ -154,22 +164,47 @@ export function WorkflowChatInterface({ context, messages: externalMessages, onM
         const lines = chunk.split('\n').filter((line) => line.trim());
 
         for (const line of lines) {
-          if (line.startsWith('data: ')) {
-            try {
-              const data = JSON.parse(line.slice(6));
-              if (data.type === 'text') {
-                assistantContent += data.content;
-                setMessages((prev) => {
-                  const newMessages = [...prev];
-                  newMessages[newMessages.length - 1] = {
-                    role: 'assistant',
-                    content: assistantContent,
-                  };
-                  return newMessages;
-                });
+          if (!line.startsWith('data: ')) continue;
+
+          let data: any;
+          try {
+            data = JSON.parse(line.slice(6));
+          } catch {
+            continue;
+          }
+
+          if (data.type === 'text') {
+            assistantContent += data.content;
+            setMessages((prev) => {
+              const newMessages = [...prev];
+              newMessages[newMessages.length - 1] = {
+                role: 'assistant',
+                content: assistantContent,
+              };
+              return newMessages;
+            });
+          } else if (data.type === 'content_update') {
+            if (onContentUpdate) {
+              onContentUpdate(data.content);
+              const updates: ContentUpdate = data.content;
+              const changes: string[] = [];
+              if (updates.scene_update) {
+                changes.push(`Scene ${updates.scene_update.index + 1} updated`);
               }
-            } catch (e) {
-              // Skip invalid JSON
+              if (updates.script) {
+                changes.push(`Full script rewritten (${updates.script.scenes.length} scenes)`);
+              }
+              if (updates.hookVariations) {
+                changes.push(`Hook variations updated (${updates.hookVariations.length} hooks)`);
+              }
+              if (updates.bRollShotList) {
+                changes.push(`B-roll shot list updated (${updates.bRollShotList.length} shots)`);
+              }
+              const summary = changes.length > 0 ? changes.join(' · ') : 'Content updated';
+              setMessages((prev) => [
+                ...prev,
+                { role: 'system', content: `✓ ${summary}` },
+              ]);
             }
           }
         }

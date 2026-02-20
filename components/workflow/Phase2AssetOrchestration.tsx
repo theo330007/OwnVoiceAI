@@ -1,13 +1,13 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import {
   Loader2, Video, Image, Zap, Copy, CheckCircle, ChevronDown,
   Download, Camera, Film, LayoutGrid, MessageCircle, GraduationCap, Flame,
   BookOpen, Lightbulb, Heart, TrendingUp, RefreshCw, Headphones, Upload,
-  ChevronRight, X, User as UserIcon,
+  ChevronRight, X, User as UserIcon, Mic, Settings2,
 } from 'lucide-react';
 import { generateProductionAssets } from '@/app/actions/workflows';
 
@@ -89,6 +89,13 @@ interface AttachedReference {
   type: 'upload' | 'creator_face' | 'creator_voice';
 }
 
+type ContentUpdate = {
+  scene_update?: { index: number; visual: string; audio: string; assets?: any[] };
+  script?: { scenes: any[] };
+  hookVariations?: { type: string; hook: string }[];
+  bRollShotList?: { title: string; description: string; camera_angle: string; vibe_tag: string; duration: string }[];
+};
+
 interface Props {
   phase1Data: any;
   contentIdea: any;
@@ -99,6 +106,8 @@ interface Props {
   chatMessages?: ChatMessage[];
   creatorFaceUrl?: string | null;
   creatorVoiceUrl?: string | null;
+  externalUpdate?: ContentUpdate | null;
+  onContentChange?: (content: { script: any; hookVariations: any[]; bRollShotList: any[] }) => void;
 }
 
 function AssetPreview({ url, type, className = 'w-16 h-16' }: { url: string; type: string; className?: string }) {
@@ -417,6 +426,8 @@ export function Phase2AssetOrchestration({
   chatMessages = [],
   creatorFaceUrl,
   creatorVoiceUrl,
+  externalUpdate,
+  onContentChange,
 }: Props) {
   const [isGenerating, setIsGenerating] = useState(false);
   const [script, setScript] = useState<any>(initialData.script || null);
@@ -429,6 +440,39 @@ export function Phase2AssetOrchestration({
   const [generatedAssets, setGeneratedAssets] = useState<Map<string, GeneratedAssetResult>>(new Map());
   const [generatingAssets, setGeneratingAssets] = useState<Set<string>>(new Set());
   const [attachedReferences, setAttachedReferences] = useState<Map<string, AttachedReference[]>>(new Map());
+
+  // Global production defaults
+  const [globalFaceMode, setGlobalFaceMode] = useState<'creator' | 'upload' | 'none'>('none');
+  const [globalVoiceMode, setGlobalVoiceMode] = useState<'creator' | 'upload' | 'none'>('none');
+  const [customFaceRef, setCustomFaceRef] = useState<AttachedReference | null>(null);
+  const [customVoiceRef, setCustomVoiceRef] = useState<AttachedReference | null>(null);
+  const [generatingScene, setGeneratingScene] = useState<number | null>(null);
+  const customFaceInputRef = useRef<HTMLInputElement>(null);
+  const customVoiceInputRef = useRef<HTMLInputElement>(null);
+
+  // Apply external content updates from AI chat
+  useEffect(() => {
+    if (!externalUpdate) return;
+    if (externalUpdate.scene_update) {
+      const { index, ...sceneData } = externalUpdate.scene_update;
+      setScript((prev: any) => {
+        if (!prev) return prev;
+        const scenes = [...prev.scenes];
+        scenes[index] = { ...scenes[index], ...sceneData };
+        return { ...prev, scenes };
+      });
+    }
+    if (externalUpdate.script) setScript(externalUpdate.script);
+    if (externalUpdate.hookVariations) setHookVariations(externalUpdate.hookVariations);
+    if (externalUpdate.bRollShotList) setBRollShotList(externalUpdate.bRollShotList);
+  }, [externalUpdate]);
+
+  // Notify page of content changes so the chat always has the latest context
+  useEffect(() => {
+    if (script || hookVariations.length || bRollShotList.length) {
+      onContentChange?.({ script, hookVariations, bRollShotList });
+    }
+  }, [script, hookVariations, bRollShotList]);
 
   // Get format-specific config
   const format = (phase1Data.contentFormat || 'reel') as keyof typeof FORMAT_CONFIG;
@@ -500,11 +544,33 @@ export function Phase2AssetOrchestration({
     }
   };
 
+  // Resolve which global references apply for a given asset type
+  const getGlobalRefsForAssetType = (assetType: string): AttachedReference[] => {
+    const refs: AttachedReference[] = [];
+    if (assetType === 'image' || assetType === 'video') {
+      if (globalFaceMode === 'creator' && creatorFaceUrl) {
+        refs.push({ id: 'global-face', url: creatorFaceUrl, fileName: 'My Face', type: 'creator_face' });
+      } else if (globalFaceMode === 'upload' && customFaceRef) {
+        refs.push(customFaceRef);
+      }
+    }
+    if (assetType === 'audio' || assetType === 'video') {
+      if (globalVoiceMode === 'creator' && creatorVoiceUrl) {
+        refs.push({ id: 'global-voice', url: creatorVoiceUrl, fileName: 'My Voice', type: 'creator_voice' });
+      } else if (globalVoiceMode === 'upload' && customVoiceRef) {
+        refs.push(customVoiceRef);
+      }
+    }
+    return refs;
+  };
+
   // --- Asset handlers ---
   const handleGenerateAsset = async (assetId: string, prompt: string, type: string) => {
     setGeneratingAssets((prev) => new Set(prev).add(assetId));
     try {
-      const refs = attachedReferences.get(assetId) || [];
+      const slotRefs = attachedReferences.get(assetId) || [];
+      // Slot-specific refs take priority; fall back to global defaults
+      const refs = slotRefs.length > 0 ? slotRefs : getGlobalRefsForAssetType(type);
       const referenceUrls = refs.map((r) => r.url).filter(Boolean);
 
       const response = await fetch('/api/generate-asset', {
@@ -679,6 +745,18 @@ export function Phase2AssetOrchestration({
         await handleGenerateAsset(asset.id, asset.generationPrompt, asset.type);
       }
     }
+  };
+
+  const handleGenerateScene = async (sceneIdx: number) => {
+    const scene = script?.scenes?.[sceneIdx];
+    if (!scene?.assets?.length) return;
+    setGeneratingScene(sceneIdx);
+    for (const asset of scene.assets) {
+      if (!generatedAssets.has(asset.id)) {
+        await handleGenerateAsset(asset.id, asset.generationPrompt, asset.type);
+      }
+    }
+    setGeneratingScene(null);
   };
 
   const handleDownloadAsset = async (assetId: string, generatedAsset: GeneratedAssetResult) => {
@@ -858,28 +936,172 @@ ${hookVariations.map((hook, idx) => {
 
   // --- Pre-generation state ---
   if (!script && !isGenerating) {
+    const hasFaceOption = !!creatorFaceUrl;
+    const hasVoiceOption = !!creatorVoiceUrl;
+
     return (
       <div className="max-w-4xl mx-auto">
-        <Card className="bg-white rounded-3xl shadow-soft p-12 text-center">
-          <FormatIcon className="w-16 h-16 text-dusty-rose mx-auto mb-6" />
-          <h2 className="font-serif text-3xl text-sage mb-4">
-            Ready to Create Your {cfg.label}?
-          </h2>
-          <div className="flex justify-center mb-6"><RecapBadges /></div>
-          <p className="text-sage/70 mb-8 max-w-2xl mx-auto">
-            {format === 'carousel'
-              ? "We'll generate a slide-by-slide script, visual guidelines, hook variations, and production assets for your carousel."
-              : format === 'story'
-              ? "We'll generate a story sequence, supporting shots, hook variations, and production assets for your stories."
-              : "We'll generate a dual-column script, B-roll shot list, hook variations, and production assets for your reel."}
-          </p>
-          <Button
-            onClick={() => handleGenerate(false)}
-            className="bg-sage hover:bg-sage/90 text-cream font-medium py-4 px-8 rounded-2xl"
-          >
-            <Zap className="w-5 h-5 mr-2" />
-            {cfg.generateLabel}
-          </Button>
+        <Card className="bg-white rounded-3xl shadow-soft p-10">
+          {/* Header */}
+          <div className="text-center mb-8">
+            <FormatIcon className="w-14 h-14 text-dusty-rose mx-auto mb-5" />
+            <h2 className="font-serif text-3xl text-sage mb-3">
+              Ready to Create Your {cfg.label}?
+            </h2>
+            <div className="flex justify-center mb-4"><RecapBadges /></div>
+            <p className="text-sage/60 text-sm max-w-xl mx-auto">
+              {format === 'carousel'
+                ? "We'll generate a slide-by-slide script, visual guidelines, hook variations, and production assets."
+                : format === 'story'
+                ? "We'll generate a story sequence, supporting shots, hook variations, and production assets."
+                : "We'll generate a dual-column script, B-roll shot list, hook variations, and production assets."}
+            </p>
+          </div>
+
+          {/* Production Defaults Panel */}
+          <div className="border border-sage/10 rounded-2xl p-6 mb-8 bg-sage/[0.02]">
+            <div className="flex items-center gap-2 mb-5">
+              <Settings2 className="w-4 h-4 text-sage/60" />
+              <h3 className="text-sm font-semibold text-sage">Production Defaults</h3>
+              <span className="text-xs text-sage/40">Auto-applied to all generated assets</span>
+            </div>
+
+            <div className="grid grid-cols-2 gap-6">
+              {/* Face reference */}
+              <div>
+                <p className="text-[11px] font-semibold text-sage/50 uppercase tracking-widest mb-3">
+                  Face / Appearance
+                </p>
+                <div className="space-y-2">
+                  {hasFaceOption && (
+                    <button
+                      onClick={() => setGlobalFaceMode(globalFaceMode === 'creator' ? 'none' : 'creator')}
+                      className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl border transition-all ${
+                        globalFaceMode === 'creator'
+                          ? 'border-sage bg-sage/5 text-sage'
+                          : 'border-sage/10 hover:border-sage/25 text-sage/60'
+                      }`}
+                    >
+                      <img src={creatorFaceUrl!} alt="My Face" className="w-7 h-7 rounded-lg object-cover flex-shrink-0" />
+                      <span className="text-sm font-medium">My Face</span>
+                      {globalFaceMode === 'creator' && <CheckCircle className="w-4 h-4 ml-auto text-sage flex-shrink-0" />}
+                    </button>
+                  )}
+                  <button
+                    onClick={() => customFaceInputRef.current?.click()}
+                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl border transition-all ${
+                      globalFaceMode === 'upload'
+                        ? 'border-sage bg-sage/5 text-sage'
+                        : 'border-sage/10 hover:border-sage/25 text-sage/60'
+                    }`}
+                  >
+                    <Upload className="w-4 h-4 flex-shrink-0" />
+                    <span className="text-sm truncate">{customFaceRef ? customFaceRef.fileName : 'Upload photo or video'}</span>
+                    {globalFaceMode === 'upload' && <CheckCircle className="w-4 h-4 ml-auto text-sage flex-shrink-0" />}
+                  </button>
+                  {globalFaceMode !== 'none' && (
+                    <button
+                      onClick={() => { setGlobalFaceMode('none'); setCustomFaceRef(null); }}
+                      className="text-xs text-sage/40 hover:text-sage/70 pl-1 transition-colors"
+                    >
+                      × Clear selection
+                    </button>
+                  )}
+                  {globalFaceMode === 'none' && !hasFaceOption && (
+                    <p className="text-xs text-sage/35 pl-1">Upload a face reference above, or add one to your profile.</p>
+                  )}
+                  <input
+                    ref={customFaceInputRef}
+                    type="file"
+                    accept="image/*,video/*"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        const url = URL.createObjectURL(file);
+                        setCustomFaceRef({ id: `custom-face-${Date.now()}`, url, fileName: file.name, file, type: 'upload' });
+                        setGlobalFaceMode('upload');
+                      }
+                      e.target.value = '';
+                    }}
+                  />
+                </div>
+              </div>
+
+              {/* Voice reference */}
+              <div>
+                <p className="text-[11px] font-semibold text-sage/50 uppercase tracking-widest mb-3">
+                  Voice / Audio
+                </p>
+                <div className="space-y-2">
+                  {hasVoiceOption && (
+                    <button
+                      onClick={() => setGlobalVoiceMode(globalVoiceMode === 'creator' ? 'none' : 'creator')}
+                      className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl border transition-all ${
+                        globalVoiceMode === 'creator'
+                          ? 'border-dusty-rose bg-dusty-rose/5 text-dusty-rose'
+                          : 'border-sage/10 hover:border-sage/25 text-sage/60'
+                      }`}
+                    >
+                      <div className="w-7 h-7 rounded-lg bg-dusty-rose/10 flex items-center justify-center flex-shrink-0">
+                        <Mic className="w-3.5 h-3.5 text-dusty-rose" />
+                      </div>
+                      <span className="text-sm font-medium">My Voice</span>
+                      {globalVoiceMode === 'creator' && <CheckCircle className="w-4 h-4 ml-auto text-dusty-rose flex-shrink-0" />}
+                    </button>
+                  )}
+                  <button
+                    onClick={() => customVoiceInputRef.current?.click()}
+                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl border transition-all ${
+                      globalVoiceMode === 'upload'
+                        ? 'border-dusty-rose bg-dusty-rose/5 text-dusty-rose'
+                        : 'border-sage/10 hover:border-sage/25 text-sage/60'
+                    }`}
+                  >
+                    <Upload className="w-4 h-4 flex-shrink-0" />
+                    <span className="text-sm truncate">{customVoiceRef ? customVoiceRef.fileName : 'Upload audio sample'}</span>
+                    {globalVoiceMode === 'upload' && <CheckCircle className="w-4 h-4 ml-auto text-dusty-rose flex-shrink-0" />}
+                  </button>
+                  {globalVoiceMode !== 'none' && (
+                    <button
+                      onClick={() => { setGlobalVoiceMode('none'); setCustomVoiceRef(null); }}
+                      className="text-xs text-sage/40 hover:text-sage/70 pl-1 transition-colors"
+                    >
+                      × Clear selection
+                    </button>
+                  )}
+                  {globalVoiceMode === 'none' && !hasVoiceOption && (
+                    <p className="text-xs text-sage/35 pl-1">Upload a voice sample above, or add one to your profile.</p>
+                  )}
+                  <input
+                    ref={customVoiceInputRef}
+                    type="file"
+                    accept="audio/*"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        const url = URL.createObjectURL(file);
+                        setCustomVoiceRef({ id: `custom-voice-${Date.now()}`, url, fileName: file.name, file, type: 'upload' });
+                        setGlobalVoiceMode('upload');
+                      }
+                      e.target.value = '';
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex justify-center">
+            <Button
+              onClick={() => handleGenerate(false)}
+              className="bg-sage hover:bg-sage/90 text-cream font-medium py-4 px-10 rounded-2xl"
+            >
+              <Zap className="w-5 h-5 mr-2" />
+              {cfg.generateLabel}
+            </Button>
+          </div>
         </Card>
       </div>
     );
@@ -910,12 +1132,34 @@ ${hookVariations.map((hook, idx) => {
   const totalAssets = sceneAssetCount + bRollAssetCount + hookAssetCount;
 
   // --- Results state ---
+  const activeDefaultsCount = (globalFaceMode !== 'none' ? 1 : 0) + (globalVoiceMode !== 'none' ? 1 : 0);
+
   return (
     <div className="max-w-6xl mx-auto space-y-4">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-2">
         <RecapBadges />
         <div className="flex items-center gap-2">
+          {/* Active defaults summary */}
+          {activeDefaultsCount > 0 && (
+            <div className="flex items-center gap-1.5 px-3 py-1.5 bg-cream border border-sage/10 rounded-xl">
+              {globalFaceMode !== 'none' && (
+                <div className="flex items-center gap-1 text-xs text-sage">
+                  <UserIcon className="w-3 h-3" />
+                  <span>{globalFaceMode === 'creator' ? 'My Face' : 'Custom face'}</span>
+                </div>
+              )}
+              {globalFaceMode !== 'none' && globalVoiceMode !== 'none' && (
+                <span className="text-sage/20">·</span>
+              )}
+              {globalVoiceMode !== 'none' && (
+                <div className="flex items-center gap-1 text-xs text-dusty-rose">
+                  <Mic className="w-3 h-3" />
+                  <span>{globalVoiceMode === 'creator' ? 'My Voice' : 'Custom voice'}</span>
+                </div>
+              )}
+            </div>
+          )}
           {totalAssets > 0 && (
             <Button
               onClick={handleGenerateAllAssets}
@@ -926,7 +1170,7 @@ ${hookVariations.map((hook, idx) => {
               {generatingAssets.size > 0 ? (
                 <><Loader2 className="w-4 h-4 animate-spin" /> Generating...</>
               ) : (
-                <><Zap className="w-4 h-4" /> Generate All Assets ({totalAssets})</>
+                <><Zap className="w-4 h-4" /> Generate All ({totalAssets})</>
               )}
             </Button>
           )}
@@ -1001,7 +1245,30 @@ ${hookVariations.map((hook, idx) => {
                 {/* Inline assets for this scene */}
                 {scene.assets && scene.assets.length > 0 && (
                   <div className="border-t border-sage/10 px-4 pb-3 pt-2">
-                    <p className="text-[10px] font-semibold text-sage/40 uppercase tracking-widest mb-1">Assets</p>
+                    <div className="flex items-center justify-between mb-1">
+                      <p className="text-[10px] font-semibold text-sage/40 uppercase tracking-widest">
+                        Assets ({scene.assets.length})
+                      </p>
+                      <button
+                        onClick={() => handleGenerateScene(idx)}
+                        disabled={generatingScene === idx || scene.assets.every((a: any) => generatedAssets.has(a.id))}
+                        className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-medium transition-all ${
+                          generatingScene === idx
+                            ? 'bg-sage/10 text-sage/40 cursor-wait'
+                            : scene.assets.every((a: any) => generatedAssets.has(a.id))
+                            ? 'bg-sage/5 text-sage/30 cursor-default'
+                            : 'bg-sage/10 hover:bg-sage/20 text-sage cursor-pointer'
+                        }`}
+                      >
+                        {generatingScene === idx ? (
+                          <><Loader2 className="w-3 h-3 animate-spin" /> Generating...</>
+                        ) : scene.assets.every((a: any) => generatedAssets.has(a.id)) ? (
+                          <><CheckCircle className="w-3 h-3" /> Done</>
+                        ) : (
+                          <><Zap className="w-3 h-3" /> Generate Scene</>
+                        )}
+                      </button>
+                    </div>
                     <div className="divide-y divide-sage/5">
                       {scene.assets.map((asset: any) => renderAssetRow(asset))}
                     </div>

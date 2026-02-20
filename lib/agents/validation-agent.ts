@@ -80,17 +80,36 @@ async function executeTool(functionCall: any) {
   throw new Error(`Unknown function: ${name}`);
 }
 
-export async function* validateContentIdea(userQuery: string) {
-  const model = genAI.getGenerativeModel({
-    model: 'gemini-2.0-flash-exp',
-    tools: [{ functionDeclarations: tools as any }],
-    systemInstruction: `You are OwnVoice AI, a boutique wellness content validation agent for wellness entrepreneurs.
+function buildSystemInstruction(userProfile?: Record<string, any>): string {
+  let profileBlock = '';
+  if (userProfile) {
+    const fields: string[] = [];
+    if (userProfile.name) fields.push(`Name: ${userProfile.name}`);
+    if (userProfile.industries?.length) fields.push(`Industries: ${userProfile.industries.join(', ')}`);
+    if (userProfile.tone) fields.push(`Tone & Voice: ${userProfile.tone}`);
+    if (userProfile.niche) fields.push(`Niche: ${userProfile.niche}`);
+    if (userProfile.target_audience) fields.push(`Target Audience: ${userProfile.target_audience}`);
+    if (userProfile.core_belief) fields.push(`Core Belief: ${userProfile.core_belief}`);
+    if (userProfile.positioning) fields.push(`Positioning: ${userProfile.positioning}`);
+    if (userProfile.offering) fields.push(`Offering: ${userProfile.offering}`);
+    if (userProfile.brand_words?.length) fields.push(`Brand Words: ${userProfile.brand_words.join(', ')}`);
+    if (fields.length > 0) {
+      profileBlock = `[CREATOR PROFILE — tailor ALL responses specifically to this person]
+${fields.join('\n')}
+
+`;
+    }
+  }
+
+  return `${profileBlock}You are OwnVoice AI, a boutique wellness content validation agent for wellness entrepreneurs.
 
 Your role is to help validate content ideas by:
 1. Analyzing relevance to current wellness trends (macro and niche)
 2. Finding scientific anchors to ground claims
 3. Providing a relevance score (1-100)
 4. Suggesting 3 refined hook variations optimized for viral reach
+
+${userProfile?.niche ? `Always frame hooks and recommendations specifically for someone in the "${userProfile.niche}" space with a "${userProfile.tone || 'expert'}" tone targeting "${userProfile.target_audience || 'their audience'}".` : ''}
 
 You have access to these tools:
 - search_knowledge_base: Search scientific research and studies in the knowledge base
@@ -101,7 +120,7 @@ WORKFLOW:
 2. Then, call search_knowledge_base with relevant keywords from the user's content idea
 3. Analyze the data and provide your validation
 
-CRITICAL: Your final response MUST be valid JSON with this exact structure:
+CRITICAL: Your final response MUST be valid JSON with this exact structure (no markdown fences, raw JSON only):
 {
   "relevance_score": <1-100>,
   "trend_alignment": {
@@ -122,49 +141,78 @@ CRITICAL: Your final response MUST be valid JSON with this exact structure:
   "additional_notes": "Any other strategic insights or recommendations"
 }
 
-Be specific, actionable, and data-driven in your recommendations.`,
+Be specific, actionable, and data-driven in your recommendations.`;
+}
+
+export async function* validateContentIdea(
+  userQuery: string,
+  userProfile?: Record<string, any>,
+  conversationHistory?: { role: string; content: string }[]
+) {
+  const model = genAI.getGenerativeModel({
+    model: 'gemini-2.0-flash',
+    tools: [{ functionDeclarations: tools as any }],
+    systemInstruction: buildSystemInstruction(userProfile),
   });
 
-  const chat = model.startChat();
-  let result = await chat.sendMessageStream(userQuery);
+  // Map prior conversation history to Gemini format
+  const history = (conversationHistory || [])
+    .filter((m) => m.role === 'user' || m.role === 'assistant')
+    .map((m) => ({
+      role: m.role === 'assistant' ? 'model' : 'user',
+      parts: [{ text: m.content }],
+    }));
 
-  for await (const chunk of result.stream) {
-    const functionCalls = chunk.functionCalls();
+  const chat = model.startChat({ history });
 
-    if (functionCalls && functionCalls.length > 0) {
-      // Execute function calls
-      const functionResponses = await Promise.all(
-        functionCalls.map(async (fc) => {
-          try {
-            const response = await executeTool(fc);
-            return {
-              name: fc.name,
-              response: { result: response },
-            };
-          } catch (error: any) {
-            return {
-              name: fc.name,
-              response: { error: error.message },
-            };
-          }
-        })
-      );
+  // Agentic loop using sendMessageStream every round:
+  // - For tool-call rounds: stream completes with no text, we read function calls
+  //   from the aggregated response and execute them
+  // - For the final round: text chunks stream in immediately, ending the spinner
+  let currentQuery: any = userQuery;
 
-      // Send function results back to model
-      result = await chat.sendMessageStream(functionResponses as any);
+  for (let round = 0; round < 7; round++) {
+    const streamResult = await chat.sendMessageStream(currentQuery);
 
-      // Continue streaming the response
-      for await (const responseChunk of result.stream) {
-        const text = responseChunk.text();
-        if (text) {
-          yield { type: 'text', content: text };
-        }
-      }
-    } else {
+    // Stream any text chunks as they arrive (only happens on the final round)
+    for await (const chunk of streamResult.stream) {
       const text = chunk.text();
       if (text) {
         yield { type: 'text', content: text };
       }
     }
+
+    // After the stream is fully consumed, check the aggregated response for function calls
+    const aggregated = await streamResult.response;
+    const functionCalls = aggregated.functionCalls();
+
+    if (!functionCalls || functionCalls.length === 0) {
+      // No function calls in this round — text was already streamed, we're done
+      break;
+    }
+
+    // Emit a status event for each tool call so the UI shows progress
+    for (const fc of functionCalls) {
+      const statusMsg =
+        fc.name === 'get_latest_trends'
+          ? `Fetching ${(fc.args as any).layer} wellness trends…`
+          : `Searching scientific knowledge base…`;
+      yield { type: 'status', content: statusMsg };
+    }
+
+    // Execute all tool calls in parallel
+    const functionResponses = await Promise.all(
+      functionCalls.map(async (fc) => {
+        try {
+          const result = await executeTool(fc);
+          return { name: fc.name, response: { result } };
+        } catch (error: any) {
+          return { name: fc.name, response: { error: error.message } };
+        }
+      })
+    );
+
+    // Feed results back as the next query
+    currentQuery = functionResponses as any;
   }
 }

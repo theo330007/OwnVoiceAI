@@ -11,14 +11,15 @@ import type { Trend } from '@/lib/types';
 interface Props {
   initialTrends: Trend[];
   userId: string;
-  userIndustry: string;
+  userIndustries: string[];
 }
 
-export function NicheTrendsPanel({ initialTrends, userId, userIndustry }: Props) {
+export function NicheTrendsPanel({ initialTrends, userId, userIndustries }: Props) {
   const [trends, setTrends] = useState(initialTrends);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isScraping, setIsScraping] = useState(false);
   const [scrapingResult, setScrapingResult] = useState<any>(null);
+  const [selectedIndustry, setSelectedIndustry] = useState(userIndustries[0] || '');
   const [selectedTrend, setSelectedTrend] = useState<Trend | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [generatingInsightId, setGeneratingInsightId] = useState<string | null>(null);
@@ -35,7 +36,7 @@ export function NicheTrendsPanel({ initialTrends, userId, userIndustry }: Props)
     setScrapingResult(null);
 
     try {
-      const result = await scrapeUserInstagramTrends(userId, userIndustry);
+      const result = await scrapeUserInstagramTrends(userId, selectedIndustry);
       setScrapingResult(result);
 
       if (result.success) {
@@ -120,11 +121,30 @@ export function NicheTrendsPanel({ initialTrends, userId, userIndustry }: Props)
         </Button>
       </div>
 
-      {/* Instagram Scraper Button */}
-      <div className="mb-6">
+      {/* Instagram Scraper */}
+      <div className="mb-6 space-y-2">
+        {/* Industry selector — shown when multiple industries */}
+        {userIndustries.length > 1 && (
+          <div className="flex flex-wrap gap-1.5">
+            {userIndustries.map((ind) => (
+              <button
+                key={ind}
+                onClick={() => setSelectedIndustry(ind)}
+                className={`px-3 py-1 rounded-full text-xs font-medium transition-all ${
+                  selectedIndustry === ind
+                    ? 'bg-dusty-rose text-cream'
+                    : 'bg-sage/10 text-sage/60 hover:bg-sage/20'
+                }`}
+              >
+                {ind}
+              </button>
+            ))}
+          </div>
+        )}
+
         <Button
           onClick={handleScrape}
-          disabled={isScraping || !userIndustry}
+          disabled={isScraping || !selectedIndustry}
           className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white"
         >
           {isScraping ? (
@@ -135,13 +155,13 @@ export function NicheTrendsPanel({ initialTrends, userId, userIndustry }: Props)
           ) : (
             <>
               <Instagram className="w-4 h-4 mr-2" />
-              Scrape {userIndustry || 'Industry'} Trends
+              Scrape {selectedIndustry || 'Industry'} Trends
             </>
           )}
         </Button>
 
-        {!userIndustry && (
-          <p className="text-xs text-sage/60 mt-2 text-center">
+        {userIndustries.length === 0 && (
+          <p className="text-xs text-sage/60 text-center">
             Add your industry in your profile to enable scraping
           </p>
         )}

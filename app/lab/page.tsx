@@ -1,10 +1,11 @@
 import { ChatInterface } from './components/ChatInterface';
-import { requireAuth } from '@/lib/auth';
+import { UserProfileCard } from './components/UserProfileCard';
+import { getCurrentUser } from '@/lib/auth';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 
 export default async function LabPage() {
-  await requireAuth();
+  const user = await getCurrentUser();
   return (
     <div className="min-h-screen bg-cream">
       <div className="container mx-auto px-6 py-8">
@@ -25,7 +26,17 @@ export default async function LabPage() {
           </p>
         </div>
 
-        <ChatInterface />
+        <div className="grid grid-cols-3 gap-6 items-start">
+          {/* Left sidebar: profile card */}
+          <div className="col-span-1">
+            <UserProfileCard user={user} />
+          </div>
+
+          {/* Right: chat */}
+          <div className="col-span-2">
+            <ChatInterface user={user} />
+          </div>
+        </div>
       </div>
     </div>
   );

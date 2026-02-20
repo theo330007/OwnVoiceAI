@@ -78,7 +78,7 @@ export default async function DashboardPage() {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <MacroTrendsPanel initialTrends={macroTrends} />
-          <NicheTrendsPanel initialTrends={nicheTrends} userId={user.id} userIndustry={user.industry || ''} />
+          <NicheTrendsPanel initialTrends={nicheTrends} userId={user.id} userIndustries={(user.metadata as any)?.industries || (user.industry ? [user.industry] : [])} />
           <StrategyPanel insights={strategicInsights} userId={user.id} />
         </div>
       </div>

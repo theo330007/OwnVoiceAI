@@ -26,6 +26,8 @@ export default function WorkflowPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [currentPhase, setCurrentPhase] = useState(1);
   const [chatMessages, setChatMessages] = useState<Array<{ role: 'user' | 'assistant' | 'system'; content: string }>>([]);
+  const [currentPhase2Content, setCurrentPhase2Content] = useState<any>(null);
+  const [externalPhase2Update, setExternalPhase2Update] = useState<any>(null);
 
   useEffect(() => {
     loadWorkflow();
@@ -106,6 +108,10 @@ export default function WorkflowPage() {
     } catch (error: any) {
       alert(error.message || 'Failed to save phase data');
     }
+  };
+
+  const handleContentUpdate = (updates: any) => {
+    setExternalPhase2Update(updates);
   };
 
   const handleNotesChange = async () => {
@@ -212,6 +218,8 @@ export default function WorkflowPage() {
                 chatMessages={chatMessages}
                 creatorFaceUrl={user.creator_face_url}
                 creatorVoiceUrl={user.creator_voice_url}
+                externalUpdate={externalPhase2Update}
+                onContentChange={setCurrentPhase2Content}
               />
             )}
 
@@ -244,6 +252,8 @@ export default function WorkflowPage() {
               context={workflowContext}
               messages={chatMessages}
               onMessagesChange={setChatMessages}
+              onContentUpdate={handleContentUpdate}
+              currentContent={currentPhase2Content}
             />
             <WorkflowNotes
               workflowId={workflowId}
