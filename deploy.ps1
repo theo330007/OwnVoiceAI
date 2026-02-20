@@ -17,7 +17,7 @@ $PORT = 3010
 
 Write-Host "Deploying OwnVoiceAI to $REMOTE_HOST..." -ForegroundColor Cyan
 
-ssh -t "$REMOTE_USER@$REMOTE_HOST" "cd $REMOTE_DIR && git pull && npm install --production && npm run build && (pm2 restart $APP_NAME 2>/dev/null || PORT=$PORT pm2 start npm --name $APP_NAME -- start) && pm2 save"
+ssh -t "$REMOTE_USER@$REMOTE_HOST" "cd $REMOTE_DIR && git pull && npm install && npm run build && (pm2 restart $APP_NAME 2>/dev/null || PORT=$PORT pm2 start npm --name $APP_NAME -- start) && pm2 save"
 
 if ($LASTEXITCODE -eq 0) {
     Write-Host "Deployed! Running at http://${REMOTE_HOST}:${PORT}" -ForegroundColor Green
