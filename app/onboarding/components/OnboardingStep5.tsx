@@ -38,20 +38,6 @@ export default function OnboardingStep5({ data, onChange, onNext, onBack, onSkip
               placeholder="e.g. 12 years in corporate IT + nutrition certification..."
             />
           </div>
-
-          <div>
-            <label className="block text-sm font-medium text-sage mb-1.5">
-              Your vision statement
-            </label>
-            <p className="text-xs text-sage/50 mb-2">One powerful sentence that captures your mission.</p>
-            <textarea
-              value={data.vision_statement}
-              onChange={(e) => onChange({ vision_statement: e.target.value })}
-              rows={2}
-              className="w-full px-4 py-3 rounded-2xl border border-sage/20 focus:border-sage focus:outline-none focus:ring-2 focus:ring-sage/20 transition-all resize-none"
-              placeholder="e.g. Ambitious women deserve to unlock motherhood on their terms..."
-            />
-          </div>
         </div>
 
         <div className="flex items-center justify-between mt-10">

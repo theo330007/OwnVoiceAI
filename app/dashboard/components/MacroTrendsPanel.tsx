@@ -56,7 +56,7 @@ export function MacroTrendsPanel({ initialTrends }: Props) {
         </Button>
       </div>
 
-      <div className="space-y-4">
+      <div className="space-y-3 max-h-[420px] overflow-y-auto pr-1">
         {trends.length === 0 ? (
           <div className="text-center py-12">
             <p className="text-sage/50 mb-4">No macro trends yet.</p>

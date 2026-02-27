@@ -38,6 +38,7 @@ interface Props {
   onMessagesChange?: (messages: Message[]) => void;
   onContentUpdate?: (updates: ContentUpdate) => void;
   currentContent?: { script?: any; hookVariations?: any[]; bRollShotList?: any[] };
+  onExternalMessage?: (send: (msg: string) => void) => void;
 }
 
 // Dynamic prompt suggestions based on phase and state
@@ -83,7 +84,7 @@ function getSuggestedPrompts(phase: number, phaseData: any): string[] {
   ];
 }
 
-export function WorkflowChatInterface({ context, messages: externalMessages, onMessagesChange, onContentUpdate, currentContent }: Props) {
+export function WorkflowChatInterface({ context, messages: externalMessages, onMessagesChange, onContentUpdate, currentContent, onExternalMessage }: Props) {
   // Use external state if provided, otherwise use internal
   const [internalMessages, setInternalMessages] = useState<Message[]>([]);
   const messages = externalMessages || internalMessages;
@@ -124,6 +125,9 @@ export function WorkflowChatInterface({ context, messages: externalMessages, onM
       setShowSuggestions(false);
     }
   }, [messages]);
+
+  // Ref-backed sender so parent always calls the latest handleSubmit
+  const handleSubmitRef = useRef<(msg: string) => void>(() => {});
 
   const handleSubmit = async (e?: React.FormEvent, overrideInput?: string) => {
     e?.preventDefault();
@@ -222,6 +226,16 @@ export function WorkflowChatInterface({ context, messages: externalMessages, onM
       setIsStreaming(false);
     }
   };
+
+  // Keep ref fresh so parent's sender always calls the latest handleSubmit
+  handleSubmitRef.current = (msg: string) => handleSubmit(undefined, msg);
+
+  // Expose sender to parent once on mount
+  useEffect(() => {
+    if (onExternalMessage) {
+      onExternalMessage((msg: string) => handleSubmitRef.current(msg));
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSuggestionClick = (prompt: string) => {
     setShowSuggestions(false);

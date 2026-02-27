@@ -9,7 +9,6 @@ const OFFER_TYPES = [
   'Membership',
   'Physical product',
   'Digital product',
-  'Services',
 ];
 
 export default function OnboardingStep2({ data, onChange, onNext, onBack, onSkip }: OnboardingStepProps) {
@@ -35,6 +34,7 @@ export default function OnboardingStep2({ data, onChange, onNext, onBack, onSkip
               {OFFER_TYPES.map((type) => (
                 <button
                   key={type}
+                  type="button"
                   onClick={() => toggleOfferType(type)}
                   className={`px-4 py-2 rounded-2xl text-sm font-medium transition-all ${
                     data.offer_type?.includes(type)
@@ -58,17 +58,6 @@ export default function OnboardingStep2({ data, onChange, onNext, onBack, onSkip
               rows={4}
               className="w-full px-4 py-3 rounded-2xl border border-sage/20 focus:border-sage focus:outline-none focus:ring-2 focus:ring-sage/20 transition-all resize-none"
               placeholder="What do you offer and who is it for?"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-sage mb-1.5">Average price of your main offer</label>
-            <input
-              type="text"
-              value={data.average_price}
-              onChange={(e) => onChange({ average_price: e.target.value })}
-              className="w-full px-4 py-3 rounded-2xl border border-sage/20 focus:border-sage focus:outline-none focus:ring-2 focus:ring-sage/20 transition-all"
-              placeholder="e.g. $297, €500..."
             />
           </div>
         </div>

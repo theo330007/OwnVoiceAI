@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
-import { processOnboardingAnswers } from '@/lib/agents/onboarding-processor';
 import { createClient } from '@/lib/supabase';
 import type { OnboardingAnswers } from '@/lib/types/onboarding';
 
@@ -13,39 +12,20 @@ export async function POST(req: NextRequest) {
 
     const { answers } = (await req.json()) as { answers: OnboardingAnswers };
 
-    // Process with Gemini
-    const profile = await processOnboardingAnswers(answers);
-
-    // Build update payload
-    // Strategy fields are stored in metadata.strategy
     const updateData: Record<string, any> = {
       metadata: {
         ...(user.metadata || {}),
         // Map niche_tags to industries so NicheTrendsPanel picks them up
-        industries: answers.niche_tags?.length ? answers.niche_tags : (user.metadata?.industries || []),
-        strategy: {
-          persona: profile.persona,
-          niche: profile.niche,
-          positioning: profile.positioning,
-          offering: profile.offering,
-          competitors: profile.competitors,
-          hot_news: profile.hot_news,
-          target_audience: profile.target_audience,
-          transformation: profile.transformation,
-          tone: profile.tone,
-          brand_words: profile.brand_words,
-          preferred_formats: profile.preferred_formats,
-          offer_types: profile.offer_types,
-          content_pillars: profile.content_pillars,
-        },
+        ...(answers.niche_tags?.length ? { industries: answers.niche_tags } : {}),
         onboarding: {
-          completed_at: new Date().toISOString(),
+          ...(user.metadata?.onboarding || {}),
+          skipped_at: new Date().toISOString(),
           answers,
         },
       },
     };
 
-    // Also update basic profile fields from Step 1 if provided
+    // Save basic profile fields if provided
     if (answers.first_name || answers.last_name) {
       const name = [answers.first_name, answers.last_name].filter(Boolean).join(' ');
       if (name) updateData.name = name;
@@ -60,22 +40,21 @@ export async function POST(req: NextRequest) {
       };
     }
 
-    // Update user in database
     const supabase = await createClient();
-    const { error: updateError } = await supabase
+    const { error } = await supabase
       .from('users')
       .update(updateData)
       .eq('id', user.id);
 
-    if (updateError) {
-      throw new Error(`Failed to update profile: ${updateError.message}`);
+    if (error) {
+      throw new Error(`Failed to save progress: ${error.message}`);
     }
 
-    return NextResponse.json({ success: true, profile });
+    return NextResponse.json({ success: true });
   } catch (error: any) {
-    console.error('Onboarding processing error:', error);
+    console.error('Onboarding skip save error:', error);
     return NextResponse.json(
-      { error: error.message || 'Failed to process onboarding' },
+      { error: error.message || 'Failed to save progress' },
       { status: 500 }
     );
   }

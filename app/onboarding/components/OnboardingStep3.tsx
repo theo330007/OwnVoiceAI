@@ -61,32 +61,6 @@ export default function OnboardingStep3({ data, onChange, onNext, onBack, onSkip
               placeholder="Your unique approach, method, perspective..."
             />
           </div>
-
-          <div>
-            <label className="block text-sm font-medium text-sage mb-1.5">
-              What strong belief do you hold?
-            </label>
-            <textarea
-              value={data.core_belief}
-              onChange={(e) => onChange({ core_belief: e.target.value })}
-              rows={2}
-              className="w-full px-4 py-3 rounded-2xl border border-sage/20 focus:border-sage focus:outline-none focus:ring-2 focus:ring-sage/20 transition-all resize-none"
-              placeholder="A conviction that drives your work..."
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-sage mb-1.5">
-              What are you against?
-            </label>
-            <textarea
-              value={data.opposition}
-              onChange={(e) => onChange({ opposition: e.target.value })}
-              rows={2}
-              className="w-full px-4 py-3 rounded-2xl border border-sage/20 focus:border-sage focus:outline-none focus:ring-2 focus:ring-sage/20 transition-all resize-none"
-              placeholder="What practices or mindsets do you oppose?"
-            />
-          </div>
         </div>
 
         <div className="flex items-center justify-between mt-10">

@@ -10,6 +10,58 @@ import { createProjectFromConversation } from '@/app/actions/lab';
 
 type ContentType = 'educational' | 'behind_the_scenes' | 'promotional' | 'interactive';
 
+// Returns 4 example prompts tailored to the user's niche/industries.
+// Falls back gracefully when no profile data is available.
+function getSuggestions(user: any): string[] {
+  const industries: string[] = user?.metadata?.industries || (user?.industry ? [user.industry] : []);
+  const all = industries.join(' ').toLowerCase();
+
+  const isTech = /tech|saas|ai|automation|no.code|cyber|web3|crypto|software|developer/i.test(all);
+  const isBusiness = /business|entrepreneur|finance|productivity|career|leadership|sales|startup/i.test(all);
+  const isCreator = /content creation|social media|personal brand|copywriting|email marketing/i.test(all);
+  const isLifestyle = /life coach|parenting|relationship|spiritual|travel|mindset|dating/i.test(all);
+  const isHealth = /nutrition|wellness|fitness|health|weight|stress|hormone|fertility|burnout|skin|beauty|menopause|postpartum|gut|mindfulness/i.test(all);
+
+  if (isTech) return [
+    'Post idea: How AI tools are changing the way developers work in 2025',
+    'LinkedIn post: 3 automation hacks that saved me 10 hours this week',
+    'Thread: The no-code stack I use to run my entire SaaS business',
+    'Reel: What non-technical founders always get wrong about building software',
+  ];
+  if (isBusiness) return [
+    'Post idea: The biggest money mistake new entrepreneurs make in year 1',
+    'LinkedIn: How I went from employee to 6-figure business owner in 18 months',
+    'Reel: 3 productivity habits that quietly doubled my revenue',
+    'Blog post: Why most business coaches give the same generic advice',
+  ];
+  if (isCreator) return [
+    'Post idea: Why your Instagram growth has stalled (and the real fix)',
+    'Reel: My full content creation process from idea to published post',
+    'Thread: The copywriting formula that tripled my email open rates',
+    'Blog post: Personal branding vs. business branding — what to focus on first',
+  ];
+  if (isLifestyle) return [
+    'Post idea: The one daily habit that completely changed my mindset',
+    'Reel: Morning routine for busy parents who want more energy',
+    'Blog post: How to set boundaries without feeling guilty',
+    'TikTok: 3 things I wish I knew before starting my self-development journey',
+  ];
+  if (isHealth) return [
+    'Post idea: The connection between gut health and hormonal balance',
+    'Instagram reel: 5 adaptogenic herbs for stress relief',
+    'Blog post: How omega-3s support fertility',
+    'TikTok: Morning routine for balanced cortisol',
+  ];
+
+  // Generic fallback when no profile is set
+  return [
+    'Post idea: The biggest mistake my clients make before working with me',
+    'Reel: My 3 top tips for beginners in my niche',
+    'Blog post: Why the traditional approach in my industry is broken',
+    'Thread: What I learned after working with 100+ clients',
+  ];
+}
+
 const CONTENT_TYPES: { type: ContentType; label: string; emoji: string }[] = [
   { type: 'educational', label: 'Educational', emoji: '📚' },
   { type: 'behind_the_scenes', label: 'Behind the Scenes', emoji: '🎬' },
@@ -237,12 +289,7 @@ export function ChatInterface({ user }: { user: any }) {
               trends and scientific research.
             </p>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-2xl mx-auto">
-              {[
-                'Post idea: The connection between gut health and hormonal balance',
-                'Instagram reel: 5 adaptogenic herbs for stress relief',
-                'Blog post: How omega-3s support fertility',
-                'TikTok: Morning routine for balanced cortisol',
-              ].map((example, idx) => (
+              {getSuggestions(user).map((example, idx) => (
                 <button
                   key={idx}
                   onClick={() => setInput(example)}

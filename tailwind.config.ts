@@ -23,6 +23,12 @@ export default {
           50: '#FFFFFF',
           100: '#FAF9F6',
         },
+        nude: {
+          DEFAULT: '#FDF2F0',
+        },
+        'warm-border': {
+          DEFAULT: '#E9E4D9',
+        },
         'dusty-rose': {
           DEFAULT: '#D4A373',
           50: '#F9F3ED',

@@ -37,8 +37,18 @@ export default function OnboardingPage() {
     }
   };
 
-  const handleSkip = () => {
-    router.push('/dashboard');
+  const handleSkip = async () => {
+    // Save partial progress before navigating away
+    try {
+      await fetch('/api/onboarding/skip', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ answers: formData }),
+      });
+    } catch {
+      // Best-effort save — don't block navigation on failure
+    }
+    router.push('/profile');
   };
 
   const handleSubmit = async () => {
@@ -57,7 +67,7 @@ export default function OnboardingPage() {
         throw new Error(data.error || 'Failed to process onboarding');
       }
 
-      router.push('/dashboard');
+      router.push('/profile');
     } catch (err: any) {
       setError(err.message || 'Something went wrong. Please try again.');
       setIsProcessing(false);

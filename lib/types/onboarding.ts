@@ -1,3 +1,8 @@
+export interface ContentPillar {
+  title: string;
+  description: string;
+}
+
 export interface OnboardingAnswers {
   // Step 1: Identity & Context
   first_name: string;
@@ -7,34 +12,29 @@ export interface OnboardingAnswers {
   instagram: string;
   tiktok: string;
   country: string;
-  target_market: string;
-  years_in_business: string;
-  employment_status: 'full-time' | 'transitioning' | '';
+  target_market: string; // geographic/language market, e.g. "International English-speaking"
+  niche_tags: string[];  // industry/niche tags that drive trend scraping
 
   // Step 2: Offer & Business Model
   offer_type: string[];
   offer_description: string;
-  average_price: string;
 
   // Step 3: Strategic Positioning
   problem_solved: string;
   target_audience: string;
   transformation: string;
   differentiation: string;
-  core_belief: string;
-  opposition: string;
 
   // Step 4: Content DNA
   desired_tone: string;
   brand_words: string[];
   inspiration_accounts: string[];
-  content_boundaries: string;
   preferred_format: string[];
+  content_pillars: ContentPillar[];  // 3–5 content pillars
 
-  // Step 5: Bonus / Story
+  // Step 5: Story
   personal_story: string;
   legitimating_experience: string;
-  vision_statement: string;
 }
 
 export interface OnboardingStepProps {
@@ -54,23 +54,18 @@ export const EMPTY_ONBOARDING: OnboardingAnswers = {
   tiktok: '',
   country: '',
   target_market: '',
-  years_in_business: '',
-  employment_status: '',
+  niche_tags: [],
   offer_type: [],
   offer_description: '',
-  average_price: '',
   problem_solved: '',
   target_audience: '',
   transformation: '',
   differentiation: '',
-  core_belief: '',
-  opposition: '',
   desired_tone: '',
   brand_words: ['', '', ''],
   inspiration_accounts: ['', '', ''],
-  content_boundaries: '',
   preferred_format: [],
+  content_pillars: [{ title: '', description: '' }],
   personal_story: '',
   legitimating_experience: '',
-  vision_statement: '',
 };

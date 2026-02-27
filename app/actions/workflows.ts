@@ -362,6 +362,9 @@ export async function generateProductionAssets(input: {
   toneStyle?: string;
   contentAngle?: string;
   refinementContext?: string;
+  contentPillars?: { title: string; description: string }[];
+  positioning?: string;
+  tone?: string;
 }) {
   try {
     const geminiService = (await import('@/lib/services/gemini.service')).gemini;
@@ -461,12 +464,11 @@ export async function generateProductionAssets(input: {
       ? `5. **Production Assets per Slide**:
    For EACH slide in the script, generate a list of required production assets.
    Typical assets per slide:
-   - 1-2 images (background texture, product photo, lifestyle shot)
-   - Optional: overlay graphic or icon set
+   - 1-2 images (background texture, product photo, lifestyle shot, graphic/icon overlay)
 
    Each asset must include:
    - id: Unique ID following pattern "scene-{slideNumber}-{type}-{purpose}" (e.g., "scene-1-image-background")
-   - type: "image" | "video" | "audio"
+   - type: MUST be exactly one of "image", "video", or "audio" — no other values are valid
    - description: Human-readable description of what this asset is
    - generationPrompt: AI-optimized prompt for image/video generation tools (detailed, descriptive, include style keywords and aspect ratio ${aspectRatio})
    - usage: How this asset is used (e.g., "Slide background", "Product overlay", "Texture layer")`
@@ -529,6 +531,7 @@ ${assetInstruction}
 
 ASSET GENERATION GUIDELINES:
 - ALL generation prompts must align with the brand's visual style described above
+- If a Visual Identity / Charte Graphique is specified in the context, every image generationPrompt MUST reference it (colors, typography style, aesthetic)
 - Use consistent aesthetic language across all prompts
 - Specify aspect ratio ${aspectRatio} in all image/video prompts
 - Make prompts detailed enough for AI image/video generators (Midjourney, DALL-E, Runway style)
@@ -601,10 +604,57 @@ Return as JSON:
       assets = JSON.parse(repaired);
     }
 
+    // Self-critique step: check script against content pillars
+    let critiqueNotes: string | null = null;
+    if (assets.script?.scenes?.length && input.contentPillars?.length) {
+      try {
+        const pillarsText = input.contentPillars
+          .map((p) => `- ${p.title}${p.description ? `: ${p.description}` : ''}`)
+          .join('\n');
+
+        const critiquePrompt = `You are an editorial critic for a content creator's brand.
+
+CREATOR CONTENT PILLARS:
+${pillarsText}
+${input.positioning ? `POSITIONING: ${input.positioning}` : ''}
+${input.tone ? `BRAND TONE: ${input.tone}` : ''}
+
+GENERATED SCRIPT SCENES:
+${JSON.stringify(assets.script.scenes.map((s: any, i: number) => ({ scene: i + 1, audio: s.audio })))}
+
+Your task:
+1. Check each scene's audio/copy against the content pillars.
+2. Rewrite ONLY scenes whose copy contradicts or ignores the pillars.
+3. Return a JSON object with:
+   - "scenes": array of { "index": <0-based>, "audio": "<corrected copy>" } for ONLY the scenes you changed (empty array if nothing changed)
+   - "critique_notes": a 1-sentence summary of what was corrected (or "All scenes align with content pillars." if no changes)
+
+Return ONLY valid JSON, no markdown.`;
+
+        const critiqueResponse = await geminiService.generateText(critiquePrompt);
+        let critiqueJson = critiqueResponse.trim().replace(/```json\n?/g, '').replace(/```\n?$/g, '');
+        const critiqueMatch = critiqueJson.match(/\{[\s\S]*\}/);
+        if (critiqueMatch) {
+          const critique = JSON.parse(critiqueMatch[0]);
+          critiqueNotes = critique.critique_notes || null;
+          if (critique.scenes?.length) {
+            for (const fix of critique.scenes) {
+              if (assets.script.scenes[fix.index]) {
+                assets.script.scenes[fix.index].audio = fix.audio;
+              }
+            }
+          }
+        }
+      } catch {
+        // Critique is best-effort; never block generation if it fails
+      }
+    }
+
     return {
       script: assets.script,
       shot_list: assets.shot_list || [],
       hook_variations: assets.hook_variations || [],
+      critique_notes: critiqueNotes,
     };
   } catch (error: any) {
     console.error('Production asset generation failed:', error);

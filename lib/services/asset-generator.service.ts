@@ -1,3 +1,5 @@
+import { gemini } from './gemini.service';
+
 export type AssetType = 'image' | 'video' | 'audio';
 
 export interface GeneratedAsset {
@@ -68,12 +70,51 @@ class MockAssetProvider implements AssetGeneratorProvider {
   }
 }
 
+class GeminiAssetProvider implements AssetGeneratorProvider {
+  name = 'gemini';
+  supportedTypes: AssetType[] = ['image', 'video', 'audio'];
+
+  async generateAsset(
+    type: AssetType,
+    prompt: string,
+    options?: AssetGenerationOptions
+  ): Promise<GeneratedAsset> {
+    const start = Date.now();
+
+    if (type === 'image') {
+      const dataUrl = await gemini.generateImage(prompt, options?.aspectRatio);
+      return {
+        url: dataUrl,
+        metadata: {
+          provider: 'gemini',
+          modelUsed: 'gemini-2.0-flash-exp-image-generation',
+          generationTime: Date.now() - start,
+        },
+      };
+    }
+
+    // Video and audio generation not yet supported by Gemini — return placeholder
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    if (type === 'video') {
+      return {
+        url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
+        metadata: { provider: 'gemini-fallback', generationTime: Date.now() - start },
+      };
+    }
+    return {
+      url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3',
+      metadata: { provider: 'gemini-fallback', generationTime: Date.now() - start },
+    };
+  }
+}
+
 class AssetGeneratorService {
   private providers = new Map<string, AssetGeneratorProvider>();
-  private defaultProvider = 'mock';
+  private defaultProvider = 'gemini';
 
   constructor() {
     this.registerProvider(new MockAssetProvider());
+    this.registerProvider(new GeminiAssetProvider());
   }
 
   registerProvider(provider: AssetGeneratorProvider) {

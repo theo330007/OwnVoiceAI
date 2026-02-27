@@ -36,8 +36,13 @@ export function Navbar({ user }: NavbarProps) {
     }
   };
 
-  // Don't show navbar on landing page (/) or auth pages
-  if (pathname === '/' || pathname?.startsWith('/auth')) {
+  // Don't show navbar where the sidebar is active (replaces it)
+  const SIDEBAR_ROUTES = ['/dashboard', '/lab', '/projects', '/profile'];
+  if (
+    pathname === '/' ||
+    pathname?.startsWith('/auth') ||
+    SIDEBAR_ROUTES.some((r) => pathname?.startsWith(r))
+  ) {
     return null;
   }
 

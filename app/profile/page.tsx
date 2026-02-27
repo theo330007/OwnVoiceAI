@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase-browser';
-import { User, Mail, Save, Loader2, Briefcase, Building2, Globe, Target, Sparkles, Package, Users, Newspaper, Plus, X, Camera, Headphones, Upload, Heart, Shield, Eye, MessageCircle, Lightbulb, Star } from 'lucide-react';
+import { User, Save, Loader2, Briefcase, Building2, Globe, Target, Sparkles, Package, Users, Newspaper, Plus, X, Camera, Headphones, Upload, Eye, MessageCircle, Star, Layers } from 'lucide-react';
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -24,15 +24,12 @@ export default function ProfilePage() {
     hot_news: '',
     target_audience: '',
     transformation: '',
-    core_belief: '',
-    opposition: '',
     tone: '',
     brand_words: [] as string[],
-    content_boundaries: '',
     preferred_formats: [] as string[],
-    vision_statement: '',
     offer_types: [] as string[],
-    offer_price: '',
+    content_pillars: [] as { title: string; description: string }[],
+    visual_identity: '',
   });
   const [newCompetitor, setNewCompetitor] = useState('');
   const [newIndustry, setNewIndustry] = useState('');
@@ -91,15 +88,12 @@ export default function ProfilePage() {
         hot_news: s.hot_news || '',
         target_audience: s.target_audience || '',
         transformation: s.transformation || '',
-        core_belief: s.core_belief || '',
-        opposition: s.opposition || '',
         tone: s.tone || '',
         brand_words: s.brand_words || [],
-        content_boundaries: s.content_boundaries || '',
         preferred_formats: s.preferred_formats || [],
-        vision_statement: s.vision_statement || '',
         offer_types: s.offer_types || [],
-        offer_price: s.offer_price || '',
+        content_pillars: s.content_pillars || [],
+        visual_identity: s.visual_identity || '',
       });
     } catch (error) {
       console.error('Failed to load user:', error);
@@ -136,15 +130,12 @@ export default function ProfilePage() {
               hot_news: formData.hot_news || null,
               target_audience: formData.target_audience || null,
               transformation: formData.transformation || null,
-              core_belief: formData.core_belief || null,
-              opposition: formData.opposition || null,
               tone: formData.tone || null,
               brand_words: formData.brand_words,
-              content_boundaries: formData.content_boundaries || null,
               preferred_formats: formData.preferred_formats,
-              vision_statement: formData.vision_statement || null,
               offer_types: formData.offer_types,
-              offer_price: formData.offer_price || null,
+              content_pillars: formData.content_pillars,
+              visual_identity: formData.visual_identity || null,
             },
           },
         })
@@ -180,15 +171,12 @@ export default function ProfilePage() {
       hot_news: s.hot_news || '',
       target_audience: s.target_audience || '',
       transformation: s.transformation || '',
-      core_belief: s.core_belief || '',
-      opposition: s.opposition || '',
       tone: s.tone || '',
       brand_words: s.brand_words || [],
-      content_boundaries: s.content_boundaries || '',
       preferred_formats: s.preferred_formats || [],
-      vision_statement: s.vision_statement || '',
       offer_types: s.offer_types || [],
-      offer_price: s.offer_price || '',
+      content_pillars: s.content_pillars || [],
+      visual_identity: s.visual_identity || '',
     });
     setNewCompetitor('');
     setNewIndustry('');
@@ -383,11 +371,11 @@ export default function ProfilePage() {
             <ReadableField label="Business Name" icon={Building2} value={formData.business_name} placeholder="Your brand name" onChange={(v) => setFormData({ ...formData, business_name: v })} />
             <ReadableField label="Website" icon={Globe} value={formData.website_url} placeholder="https://..." type="url" onChange={(v) => setFormData({ ...formData, website_url: v })} />
 
-            {/* Industries — multi-tag, required */}
+            {/* Niche — multi-tag, required (stored as industries, drives trend scraping) */}
             <div className={`md:col-span-3 rounded-2xl p-4 transition-colors ${formData.industries.length === 0 ? 'bg-red-50 border border-red-200' : 'bg-transparent'}`}>
               <label className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider mb-1">
                 <Briefcase className={`w-3.5 h-3.5 ${formData.industries.length === 0 ? 'text-red-500' : 'text-sage/50'}`} />
-                <span className={formData.industries.length === 0 ? 'text-red-600' : 'text-sage/50'}>Industries</span>
+                <span className={formData.industries.length === 0 ? 'text-red-600' : 'text-sage/50'}>Niche</span>
                 <span className="text-red-500 font-bold">*</span>
                 {formData.industries.length === 0 && (
                   <span className="ml-1 px-2 py-0.5 bg-red-100 text-red-600 text-[10px] font-semibold rounded-full uppercase tracking-wide">
@@ -450,7 +438,7 @@ export default function ProfilePage() {
                 </div>
               ) : formData.industries.length === 0 ? (
                 <p className="text-red-400 italic text-sm mt-1">
-                  Add at least one industry to unlock trend scraping in your dashboard
+                  Add at least one niche to unlock trend scraping in your dashboard
                 </p>
               ) : null}
             </div>
@@ -486,13 +474,6 @@ export default function ProfilePage() {
           <div className="space-y-8">
             <ReadableField label="Target Audience" icon={Users} value={formData.target_audience} placeholder="Who is your ideal client?" rows={3} onChange={(v) => setFormData({ ...formData, target_audience: v })} />
             <ReadableField label="Transformation Promise" icon={Star} value={formData.transformation} placeholder="The before → after you deliver..." rows={2} onChange={(v) => setFormData({ ...formData, transformation: v })} />
-
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-12 gap-y-8">
-              <ReadableField label="Core Belief" icon={Heart} value={formData.core_belief} placeholder="Your strongest conviction..." rows={2} onChange={(v) => setFormData({ ...formData, core_belief: v })} />
-              <ReadableField label="What You Stand Against" icon={Shield} value={formData.opposition} placeholder="Industry norms you oppose..." rows={2} onChange={(v) => setFormData({ ...formData, opposition: v })} />
-            </div>
-
-            <ReadableField label="Vision Statement" icon={Lightbulb} value={formData.vision_statement} placeholder="Your mission in one powerful sentence..." rows={2} onChange={(v) => setFormData({ ...formData, vision_statement: v })} />
           </div>
         </div>
 
@@ -524,10 +505,51 @@ export default function ProfilePage() {
               </label>
               <TagList items={formData.offer_types} />
             </div>
-
-            <ReadableField label="Content Boundaries" icon={Shield} value={formData.content_boundaries} placeholder="What you refuse to do..." rows={2} onChange={(v) => setFormData({ ...formData, content_boundaries: v })} />
-            <ReadableField label="Price Point" icon={Briefcase} value={formData.offer_price} placeholder="e.g., $297 USD" onChange={(v) => setFormData({ ...formData, offer_price: v })} />
           </div>
+
+          {/* Visual Identity */}
+          <div className="mt-8">
+            <label className="flex items-center gap-2 text-xs font-semibold text-sage/50 uppercase tracking-wider mb-2">
+              <Eye className="w-3.5 h-3.5" /> Visual Identity / Charte Graphique
+            </label>
+            {isEditing ? (
+              <textarea
+                value={formData.visual_identity}
+                onChange={(e) => setFormData({ ...formData, visual_identity: e.target.value })}
+                rows={3}
+                placeholder="e.g. Sage green & dusty rose palette, clean serif titles, soft grain texture, airy editorial aesthetic"
+                className="w-full px-4 py-3 rounded-2xl border border-sage/20 focus:border-sage focus:outline-none focus:ring-2 focus:ring-sage/20 transition-all text-sm text-sage resize-none"
+              />
+            ) : formData.visual_identity ? (
+              <p className="text-sm text-sage/80 leading-relaxed">{formData.visual_identity}</p>
+            ) : (
+              <p className="text-sm text-sage/30 italic">Not set — add your brand aesthetic to guide image generation</p>
+            )}
+          </div>
+
+          {/* Content Pillars */}
+          {formData.content_pillars.length > 0 && (
+            <div className="mt-8">
+              <label className="flex items-center gap-2 text-xs font-semibold text-sage/50 uppercase tracking-wider mb-3">
+                <Layers className="w-3.5 h-3.5" /> Content Pillars
+              </label>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                {formData.content_pillars.map((pillar, idx) => (
+                  <div key={idx} className="p-4 bg-sage/[0.03] rounded-2xl border border-sage/10">
+                    <div className="flex items-center gap-2 mb-1.5">
+                      <span className="w-5 h-5 bg-dusty-rose/15 text-dusty-rose text-xs font-semibold rounded-full flex items-center justify-center shrink-0">
+                        {idx + 1}
+                      </span>
+                      <p className="text-sm font-medium text-sage">{pillar.title}</p>
+                    </div>
+                    {pillar.description && (
+                      <p className="text-xs text-sage/50 leading-relaxed pl-7">{pillar.description}</p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Competitors & Trends side by side */}

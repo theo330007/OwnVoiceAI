@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { WorkflowStepper } from '@/components/workflow/WorkflowStepper';
 import { Phase1ContextualBrief } from '@/components/workflow/Phase1ContextualBrief';
@@ -28,6 +28,7 @@ export default function WorkflowPage() {
   const [chatMessages, setChatMessages] = useState<Array<{ role: 'user' | 'assistant' | 'system'; content: string }>>([]);
   const [currentPhase2Content, setCurrentPhase2Content] = useState<any>(null);
   const [externalPhase2Update, setExternalPhase2Update] = useState<any>(null);
+  const chatSendRef = useRef<((msg: string) => void) | null>(null);
 
   useEffect(() => {
     loadWorkflow();
@@ -213,6 +214,7 @@ export default function WorkflowPage() {
                 contentIdea={contentIdea}
                 trendTitle={trendTitle}
                 brandStyle={user.brand_style_prompt}
+                userProfile={user}
                 onComplete={handlePhase2Complete}
                 initialData={workflow.phase_data?.phase2}
                 chatMessages={chatMessages}
@@ -220,6 +222,7 @@ export default function WorkflowPage() {
                 creatorVoiceUrl={user.creator_voice_url}
                 externalUpdate={externalPhase2Update}
                 onContentChange={setCurrentPhase2Content}
+                onModify={(msg) => chatSendRef.current?.(msg)}
               />
             )}
 
@@ -254,6 +257,7 @@ export default function WorkflowPage() {
               onMessagesChange={setChatMessages}
               onContentUpdate={handleContentUpdate}
               currentContent={currentPhase2Content}
+              onExternalMessage={(send) => { chatSendRef.current = send; }}
             />
             <WorkflowNotes
               workflowId={workflowId}
