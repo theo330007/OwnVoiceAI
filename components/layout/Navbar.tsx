@@ -37,7 +37,7 @@ export function Navbar({ user }: NavbarProps) {
   };
 
   // Don't show navbar where the sidebar is active (replaces it)
-  const SIDEBAR_ROUTES = ['/dashboard', '/lab', '/projects', '/profile'];
+  const SIDEBAR_ROUTES = ['/dashboard', '/lab', '/projects', '/profile', '/integrations'];
   if (
     pathname === '/' ||
     pathname?.startsWith('/auth') ||

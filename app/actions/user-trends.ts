@@ -346,6 +346,7 @@ export async function scrapeUserInstagramTrends(userId: string, userIndustry: st
           relevance_score: trend.relevance_score,
           source_url: 'https://www.instagram.com',
           metadata: {
+            industry: userIndustry,
             examples: trend.examples || [],
             key_players: trend.key_players || [],
             momentum: trend.momentum || 'Unknown',

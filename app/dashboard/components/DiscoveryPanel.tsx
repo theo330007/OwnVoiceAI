@@ -8,11 +8,17 @@ import {
   Instagram,
   Loader2,
   Play,
-  ChevronRight,
+  Sparkles,
+  BookOpen,
+  Camera,
+  Megaphone,
+  Users2,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
-import { generateStrategicInsight } from '@/app/actions/user-trends';
+import { generateStrategicInsight, scrapeUserInstagramTrends } from '@/app/actions/user-trends';
 import { createWorkflow } from '@/app/actions/workflows';
-import { scrapeUserInstagramTrends } from '@/app/actions/user-trends';
+import { TrendDetailModal } from '@/components/TrendDetailModal';
 import type { Trend } from '@/lib/types';
 
 interface Props {
@@ -20,7 +26,17 @@ interface Props {
   nicheTrends: Trend[];
   userId: string;
   userIndustries: string[];
+  strategicInsights: any[];
 }
+
+const CONTENT_TYPES = [
+  { key: 'educational', label: 'Edu', icon: BookOpen },
+  { key: 'behind_the_scenes', label: 'BTS', icon: Camera },
+  { key: 'promotional', label: 'Promo', icon: Megaphone },
+  { key: 'interactive', label: 'Live', icon: Users2 },
+] as const;
+
+type ContentTypeKey = (typeof CONTENT_TYPES)[number]['key'];
 
 function momentumBadge(score: number | null) {
   if (!score) return { label: 'Niche', className: 'bg-sage/10 text-sage' };
@@ -29,53 +45,223 @@ function momentumBadge(score: number | null) {
   return { label: 'Niche', className: 'bg-sage/10 text-sage' };
 }
 
-function TrendCard({
-  trend,
+// --- InsightTabView ---
+function InsightTabView({
+  insight,
   userId,
 }: {
-  trend: Trend;
+  insight: any;
   userId: string;
 }) {
   const router = useRouter();
-  const [loading, setLoading] = useState(false);
-  const momentum = momentumBadge(trend.relevance_score);
+  const [activeTab, setActiveTab] = useState<ContentTypeKey>('educational');
+  const [startingWorkflow, setStartingWorkflow] = useState(false);
+
+  const content = insight.content_ideas?.[activeTab];
 
   const handleStartWorkflow = async () => {
-    // Macro trends are admin-scoped (no user_id); route directly to the lab
-    if (trend.layer === 'macro') {
-      router.push(`/lab?trend=${encodeURIComponent(trend.title)}`);
-      return;
-    }
-    setLoading(true);
+    setStartingWorkflow(true);
     try {
-      const result = await generateStrategicInsight(trend.id, userId);
-      if (!result?.id) throw new Error('No insight generated');
-      const workflow = await createWorkflow(result.id, 'educational');
+      const workflow = await createWorkflow(insight.id, activeTab);
       router.push(`/lab/workflow/${workflow.id}`);
     } catch (error: any) {
       alert(error.message || 'Failed to start workflow');
+      setStartingWorkflow(false);
+    }
+  };
+
+  return (
+    <div>
+      {/* Label */}
+      <div className="flex items-center gap-1.5 mb-3">
+        <Sparkles className="w-3 h-3 text-dusty-rose" />
+        <p className="text-xs font-semibold text-dusty-rose uppercase tracking-wide">
+          AI Strategic Insight
+        </p>
+      </div>
+
+      {/* Tab selector */}
+      <div className="flex gap-1 mb-3 p-1 bg-sage/5 rounded-xl">
+        {CONTENT_TYPES.map(({ key, label, icon: Icon }) => (
+          <button
+            key={key}
+            onClick={(e) => {
+              e.stopPropagation();
+              setActiveTab(key);
+            }}
+            className={`flex-1 flex items-center justify-center gap-1 py-1.5 rounded-lg text-xs font-medium transition-all ${
+              activeTab === key
+                ? 'bg-white text-sage shadow-sm'
+                : 'text-sage/50 hover:text-sage/80'
+            }`}
+          >
+            <Icon className="w-3 h-3" />
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {/* Content */}
+      {content ? (
+        <div className="space-y-2 text-sm mb-3">
+          <p className="text-sage italic leading-relaxed line-clamp-2">"{content.hook}"</p>
+          <p className="text-sage/60 leading-relaxed text-xs line-clamp-2">{content.concept}</p>
+          <p className="text-dusty-rose font-medium text-xs">{content.cta}</p>
+        </div>
+      ) : (
+        <p className="text-xs text-sage/40 mb-3">No content for this type.</p>
+      )}
+
+      {/* Start Workflow */}
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          handleStartWorkflow();
+        }}
+        disabled={startingWorkflow}
+        className="w-full flex items-center justify-center gap-2 py-2 rounded-xl bg-gradient-to-r from-sage to-dusty-rose text-cream text-xs font-medium hover:opacity-90 transition-opacity disabled:opacity-60"
+      >
+        {startingWorkflow ? (
+          <>
+            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+            Starting…
+          </>
+        ) : (
+          <>
+            <Play className="w-3.5 h-3.5" />
+            Start Workflow
+          </>
+        )}
+      </button>
+    </div>
+  );
+}
+
+// --- GenerateInsightButton ---
+function GenerateInsightButton({
+  trend,
+  userId,
+  onGenerated,
+}: {
+  trend: Trend;
+  userId: string;
+  onGenerated: () => void;
+}) {
+  const [loading, setLoading] = useState(false);
+
+  const handleGenerate = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setLoading(true);
+    try {
+      await generateStrategicInsight(trend.id, userId);
+      onGenerated();
+    } catch (error: any) {
+      alert(error.message || 'Failed to generate insight');
+    } finally {
       setLoading(false);
     }
   };
 
+  return (
+    <div className="flex flex-col items-center gap-2 py-2">
+      <p className="text-xs text-sage/50 text-center">
+        No insight yet for this trend.
+      </p>
+      <button
+        onClick={handleGenerate}
+        disabled={loading}
+        className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-sage to-dusty-rose text-cream text-xs font-medium hover:opacity-90 transition-opacity disabled:opacity-60"
+      >
+        {loading ? (
+          <>
+            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+            Generating…
+          </>
+        ) : (
+          <>
+            <Sparkles className="w-3.5 h-3.5" />
+            Generate Insight
+          </>
+        )}
+      </button>
+    </div>
+  );
+}
+
+// --- TrendCard ---
+function TrendCard({
+  trend,
+  userId,
+  existingInsight,
+  isSelected,
+  onSelect,
+  onInsightGenerated,
+  onOpenModal,
+}: {
+  trend: Trend;
+  userId: string;
+  existingInsight: any | null;
+  isSelected: boolean;
+  onSelect: () => void;
+  onInsightGenerated: () => void;
+  onOpenModal: () => void;
+}) {
+  const router = useRouter();
+  const momentum = momentumBadge(trend.relevance_score);
   const relScore = trend.relevance_score ?? 0;
+  const isMacro = trend.layer === 'macro';
+
+  const handleCardClick = () => {
+    onOpenModal();
+  };
 
   return (
-    <div className="bg-white rounded-2xl p-5 border border-warm-border hover:border-sage/30 hover:shadow-soft transition-all group">
+    <div
+      onClick={handleCardClick}
+      className={`bg-white rounded-2xl p-5 border transition-all cursor-pointer ${
+        isMacro
+          ? 'border-warm-border hover:border-sage/30 hover:shadow-soft'
+          : isSelected
+          ? 'border-sage ring-2 ring-sage/20 shadow-soft'
+          : 'border-warm-border hover:border-sage/30 hover:shadow-soft'
+      }`}
+    >
       {/* Badges row */}
-      <div className="flex items-center gap-2 mb-3">
-        <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${momentum.className}`}>
-          {momentum.label}
-        </span>
-        {trend.trend_type && (
-          <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-sage/5 text-sage/60">
-            {trend.trend_type}
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${momentum.className}`}>
+            {momentum.label}
           </span>
+          {trend.trend_type && (
+            <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-sage/5 text-sage/60">
+              {trend.trend_type}
+            </span>
+          )}
+        </div>
+        {!isMacro && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onSelect();
+            }}
+            className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium transition-all ${
+              isSelected
+                ? 'bg-sage text-cream'
+                : 'bg-sage/10 text-sage/60 hover:bg-sage/20 hover:text-sage'
+            }`}
+          >
+            {isSelected ? 'Hide' : 'Insight'}
+            {isSelected ? (
+              <ChevronUp className="w-3 h-3" />
+            ) : (
+              <ChevronDown className="w-3 h-3" />
+            )}
+          </button>
         )}
       </div>
 
       {/* Title */}
-      <h3 className="font-serif text-sage-700 text-base font-semibold leading-snug mb-1.5 group-hover:text-sage transition-colors">
+      <h3 className="font-serif text-sage text-base font-semibold leading-snug mb-1.5">
         {trend.title}
       </h3>
 
@@ -100,33 +286,56 @@ function TrendCard({
         </div>
       </div>
 
-      {/* Start Workflow */}
-      <button
-        onClick={handleStartWorkflow}
-        disabled={loading}
-        className="w-full flex items-center justify-center gap-2 py-2 rounded-xl bg-gradient-to-r from-sage to-dusty-rose text-cream text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-60"
-      >
-        {loading ? (
-          <>
-            <Loader2 className="w-3.5 h-3.5 animate-spin" />
-            Creating workflow…
-          </>
-        ) : (
-          <>
-            <Play className="w-3.5 h-3.5" />
-            Start Workflow
-          </>
-        )}
-      </button>
+      {/* Macro: Open in Lab button */}
+      {isMacro && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            router.push(`/lab?trend=${encodeURIComponent(trend.title)}`);
+          }}
+          className="w-full flex items-center justify-center gap-2 py-2 rounded-xl bg-gradient-to-r from-sage to-dusty-rose text-cream text-sm font-medium hover:opacity-90 transition-opacity"
+        >
+          <Play className="w-3.5 h-3.5" />
+          Open in Lab
+        </button>
+      )}
+
+      {/* Niche: expanded insight section */}
+      {isSelected && !isMacro && (
+        <div
+          className="border-t border-warm-border mt-1 pt-4"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {existingInsight ? (
+            <InsightTabView insight={existingInsight} userId={userId} />
+          ) : (
+            <GenerateInsightButton
+              trend={trend}
+              userId={userId}
+              onGenerated={onInsightGenerated}
+            />
+          )}
+        </div>
+      )}
     </div>
   );
 }
 
-export function DiscoveryPanel({ macroTrends, nicheTrends, userId, userIndustries }: Props) {
+// --- DiscoveryPanel ---
+export function DiscoveryPanel({
+  macroTrends,
+  nicheTrends,
+  userId,
+  userIndustries,
+  strategicInsights,
+}: Props) {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState<'niche' | 'macro'>('niche');
   const [isScraping, setIsScraping] = useState(false);
   const [selectedIndustry, setSelectedIndustry] = useState(userIndustries[0] || '');
   const [localNicheTrends, setLocalNicheTrends] = useState(nicheTrends);
+  const [selectedTrendId, setSelectedTrendId] = useState<string | null>(null);
+  const [modalTrend, setModalTrend] = useState<Trend | null>(null);
 
   const handleScrape = async () => {
     setIsScraping(true);
@@ -138,13 +347,24 @@ export function DiscoveryPanel({ macroTrends, nicheTrends, userId, userIndustrie
     }
   };
 
-  const displayTrends = activeTab === 'niche' ? localNicheTrends : macroTrends;
+  const filteredNicheTrends = selectedIndustry
+    ? localNicheTrends.filter(
+        (t) => !t.metadata?.industry || t.metadata.industry === selectedIndustry
+      )
+    : localNicheTrends;
+
+  const displayTrends = activeTab === 'niche' ? filteredNicheTrends : macroTrends;
 
   return (
     <div className="flex flex-col h-full">
       {/* Section header */}
       <div className="flex items-center justify-between mb-6">
-        <h2 className="font-serif text-2xl text-sage">Trend Discovery</h2>
+        <div>
+          <h2 className="font-serif text-2xl text-sage">Trend Discovery</h2>
+          <p className="text-xs text-sage/50 mt-0.5">
+            Not feeling inspired? Check out our Insight specially tailored for your profile
+          </p>
+        </div>
 
         {/* Toggle */}
         <div className="flex items-center gap-1 p-1 bg-sage/5 rounded-2xl">
@@ -181,7 +401,7 @@ export function DiscoveryPanel({ macroTrends, nicheTrends, userId, userIndustrie
               {userIndustries.map((ind) => (
                 <button
                   key={ind}
-                  onClick={() => setSelectedIndustry(ind)}
+                  onClick={() => setSelectedIndustry((prev) => (prev === ind ? '' : ind))}
                   className={`px-3 py-1 rounded-full text-xs font-medium transition-all ${
                     selectedIndustry === ind
                       ? 'bg-dusty-rose text-cream'
@@ -224,12 +444,34 @@ export function DiscoveryPanel({ macroTrends, nicheTrends, userId, userIndustrie
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 overflow-y-auto pb-4">
-          {displayTrends.map((trend) => (
-            <TrendCard key={trend.id} trend={trend} userId={userId} />
-          ))}
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 overflow-y-auto pb-4 items-start">
+          {displayTrends.map((trend) => {
+            const existingInsight =
+              strategicInsights.find((i) => i.trend_id === trend.id) ?? null;
+            return (
+              <TrendCard
+                key={trend.id}
+                trend={trend}
+                userId={userId}
+                existingInsight={existingInsight}
+                isSelected={selectedTrendId === trend.id}
+                onSelect={() =>
+                  setSelectedTrendId((prev) => (prev === trend.id ? null : trend.id))
+                }
+                onInsightGenerated={() => router.refresh()}
+                onOpenModal={() => setModalTrend(trend)}
+              />
+            );
+          })}
         </div>
       )}
+
+      {/* Macro trend detail modal */}
+      <TrendDetailModal
+        trend={modalTrend}
+        isOpen={modalTrend !== null}
+        onClose={() => setModalTrend(null)}
+      />
     </div>
   );
 }

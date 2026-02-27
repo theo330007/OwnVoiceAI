@@ -1,8 +1,7 @@
 'use client';
 
-import { Sparkles, Instagram, Video } from 'lucide-react';
+import { Sparkles, Instagram, Video, ChevronRight } from 'lucide-react';
 import { DiscoveryPanel } from './DiscoveryPanel';
-import { AIRecommendationCard } from './AIRecommendationCard';
 import Link from 'next/link';
 import type { Trend } from '@/lib/types';
 
@@ -26,7 +25,7 @@ function SocialStatusRow({
   return (
     <div className="mt-4 grid grid-cols-2 gap-3">
       <Link
-        href="/profile"
+        href="/integrations/instagram"
         className="flex items-center gap-3 bg-white border border-warm-border rounded-2xl px-4 py-3 hover:border-sage/30 transition-colors"
       >
         <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
@@ -40,7 +39,7 @@ function SocialStatusRow({
         </div>
       </Link>
       <Link
-        href="/profile"
+        href="/integrations"
         className="flex items-center gap-3 bg-white border border-warm-border rounded-2xl px-4 py-3 hover:border-sage/30 transition-colors"
       >
         <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-black to-gray-700 flex items-center justify-center">
@@ -80,26 +79,38 @@ export function DashboardShell({
     <div className="min-h-screen bg-cream">
       <div className="px-8 py-8 max-w-[1600px] mx-auto">
         {/* Header */}
-        <div className="flex items-start justify-between mb-10">
-          <div>
-            <p className="text-sage/50 text-sm mb-1">{dateStr}</p>
-            <h1 className="font-serif text-4xl text-sage">
-              {greeting}, {firstName}
-            </h1>
-          </div>
-          <Link
-            href="/lab"
-            className="group flex items-center gap-3 px-6 py-3.5 bg-gradient-to-r from-sage to-dusty-rose text-cream rounded-2xl shadow-soft-lg hover:opacity-95 transition-all"
-          >
-            <div className="w-7 h-7 bg-white/20 rounded-xl flex items-center justify-center group-hover:bg-white/30 transition-colors">
-              <Sparkles className="w-4 h-4" />
-            </div>
-            <div className="text-left">
-              <p className="text-sm font-semibold leading-none">OwnVoice Creation Lab</p>
-              <p className="text-xs text-cream/70 mt-0.5 leading-none">Create &amp; ideate content</p>
-            </div>
-          </Link>
+        <div className="mb-8">
+          <p className="text-sage/50 text-sm mb-1">{dateStr}</p>
+          <h1 className="font-serif text-4xl text-sage">
+            {greeting}, {firstName}
+          </h1>
         </div>
+
+        {/* OwnVoice Creation Lab hero tile */}
+        <Link
+          href="/lab"
+          className="group block bg-gradient-to-r from-sage to-dusty-rose rounded-3xl p-6 mb-8 hover:opacity-95 transition-all shadow-soft-lg"
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex items-start gap-4">
+              <div className="w-10 h-10 bg-white/20 rounded-2xl flex items-center justify-center flex-shrink-0 group-hover:bg-white/30 transition-colors mt-0.5">
+                <Sparkles className="w-5 h-5 text-cream" />
+              </div>
+              <div>
+                <p className="font-serif text-xl text-cream font-semibold leading-snug">
+                  OwnVoice Creation Lab
+                </p>
+                <p className="text-sm text-cream/75 mt-1 leading-relaxed">
+                  Validate content ideas, explore trends &amp; create AI-powered scripts tailored to your brand voice.
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 bg-white/20 hover:bg-white/30 transition-colors text-cream text-sm font-semibold px-4 py-2 rounded-xl ml-6 flex-shrink-0">
+              Open Lab
+              <ChevronRight className="w-4 h-4" />
+            </div>
+          </div>
+        </Link>
 
         {/* Main 2-column layout */}
         <div className="flex gap-8">
@@ -110,12 +121,12 @@ export function DashboardShell({
               nicheTrends={nicheTrends}
               userId={user.id}
               userIndustries={userIndustries}
+              strategicInsights={strategicInsights}
             />
           </div>
 
           {/* Right sidebar (320px) */}
-          <div className="w-80 flex-shrink-0 space-y-4">
-            <AIRecommendationCard insight={strategicInsights[0] || null} />
+          <div className="w-80 flex-shrink-0">
             <SocialStatusRow
               instagramConnected={instagramConnected}
               instagramUsername={instagramUsername}

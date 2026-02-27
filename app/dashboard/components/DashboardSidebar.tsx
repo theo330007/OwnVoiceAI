@@ -12,7 +12,7 @@ interface Props {
 const NAV_ITEMS = [
   { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
   { href: '/projects', icon: FolderOpen, label: 'Projects' },
-  { href: '/profile', icon: Link2, label: 'Integrations' },
+  { href: '/integrations', icon: Link2, label: 'Integrations' },
   { href: '/profile', icon: Settings, label: 'Settings' },
 ];
 
