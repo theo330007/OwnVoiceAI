@@ -270,6 +270,56 @@ export async function archiveProject(projectId: string) {
 }
 
 /**
+ * Create a project directly from an idea card (no workflow)
+ */
+export async function createProjectFromIdea(input: {
+  hook: string;
+  concept: string;
+  cta: string;
+  pillar: string;
+  format: 'carousel' | 'reel' | 'storytelling' | 'sales';
+  source_type: string;
+}): Promise<Project> {
+  const user = await getCurrentUser();
+  if (!user) throw new Error('User not authenticated');
+
+  const FORMAT_TO_CONTENT_TYPE: Record<string, Project['content_type']> = {
+    carousel:     'educational',
+    reel:         'educational',
+    storytelling: 'behind_the_scenes',
+    sales:        'promotional',
+  };
+
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from('projects')
+    .insert({
+      user_id: user.id,
+      title: input.hook.length > 80 ? input.hook.slice(0, 77) + '…' : input.hook,
+      description: input.concept,
+      content_type: FORMAT_TO_CONTENT_TYPE[input.format] ?? 'educational',
+      trend_title: input.pillar,
+      status: 'in_progress',
+      current_phase: 'ideation',
+      completion_percentage: 5,
+      hook: input.hook,
+      concept: input.concept,
+      cta: input.cta,
+      metadata: { source_type: input.source_type, format: input.format, pillar: input.pillar },
+    })
+    .select()
+    .single();
+
+  if (error) throw new Error(`Failed to create project: ${error.message}`);
+
+  revalidatePath('/projects');
+  revalidatePath('/dashboard');
+
+  return data as Project;
+}
+
+/**
  * Delete a project
  */
 export async function deleteProject(projectId: string) {

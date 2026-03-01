@@ -2,6 +2,7 @@
 
 import { Sparkles, Instagram, Video, ChevronRight } from 'lucide-react';
 import { DiscoveryPanel } from './DiscoveryPanel';
+import { HotTopicsWidget } from './HotTopicsWidget';
 import Link from 'next/link';
 import type { Trend } from '@/lib/types';
 
@@ -13,6 +14,8 @@ interface Props {
   instagramConnected: boolean;
   instagramUsername: string | null;
   userIndustries: string[];
+  hotNews: string;
+  strategy: Record<string, any>;
 }
 
 function SocialStatusRow({
@@ -62,6 +65,8 @@ export function DashboardShell({
   instagramConnected,
   instagramUsername,
   userIndustries,
+  hotNews,
+  strategy,
 }: Props) {
   const now = new Date();
   const hour = now.getHours();
@@ -122,15 +127,18 @@ export function DashboardShell({
               userId={user.id}
               userIndustries={userIndustries}
               strategicInsights={strategicInsights}
+              pillars={strategy.content_pillars || []}
+              strategy={strategy}
             />
           </div>
 
           {/* Right sidebar (320px) */}
-          <div className="w-80 flex-shrink-0">
+          <div className="w-80 flex-shrink-0 space-y-4">
             <SocialStatusRow
               instagramConnected={instagramConnected}
               instagramUsername={instagramUsername}
             />
+            <HotTopicsWidget initialHotNews={hotNews} />
           </div>
         </div>
       </div>

@@ -15,8 +15,12 @@ export async function POST(req: NextRequest) {
     const updateData: Record<string, any> = {
       metadata: {
         ...(user.metadata || {}),
-        // Map niche_tags to industries so NicheTrendsPanel picks them up
-        ...(answers.niche_tags?.length ? { industries: answers.niche_tags } : {}),
+        // Map niche_tags + primary_industry to industries so NicheTrendsPanel picks them up
+        ...(answers.niche_tags?.length
+          ? { industries: answers.niche_tags }
+          : answers.primary_industry
+          ? { industries: [answers.primary_industry] }
+          : {}),
         onboarding: {
           ...(user.metadata?.onboarding || {}),
           skipped_at: new Date().toISOString(),
@@ -39,6 +43,10 @@ export async function POST(req: NextRequest) {
         ...(answers.tiktok ? { tiktok: answers.tiktok } : {}),
       };
     }
+
+    // Save Brand Anchor fields if reached
+    if (answers.primary_industry) updateData.industry = answers.primary_industry;
+    if (answers.brand_bio) updateData.bio = answers.brand_bio;
 
     const supabase = await createClient();
     const { error } = await supabase

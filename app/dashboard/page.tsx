@@ -29,6 +29,9 @@ export default async function DashboardPage() {
     (user.metadata as any)?.industries ||
     (user.industry ? [user.industry] : []);
 
+  const strategy = (user.metadata as any)?.strategy || {};
+  const hotNews: string = strategy?.hot_news || '';
+
   return (
     <DashboardShell
       user={user}
@@ -38,6 +41,8 @@ export default async function DashboardPage() {
       instagramConnected={!!user.instagram_username}
       instagramUsername={user.instagram_username ?? null}
       userIndustries={userIndustries}
+      hotNews={hotNews}
+      strategy={strategy}
     />
   );
 }

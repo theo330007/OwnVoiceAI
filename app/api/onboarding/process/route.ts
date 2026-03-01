@@ -21,8 +21,12 @@ export async function POST(req: NextRequest) {
     const updateData: Record<string, any> = {
       metadata: {
         ...(user.metadata || {}),
-        // Map niche_tags to industries so NicheTrendsPanel picks them up
-        industries: answers.niche_tags?.length ? answers.niche_tags : (user.metadata?.industries || []),
+        // Map niche_tags + primary_industry to industries so NicheTrendsPanel picks them up
+        industries: answers.niche_tags?.length
+          ? answers.niche_tags
+          : answers.primary_industry
+          ? [answers.primary_industry]
+          : (user.metadata?.industries || []),
         strategy: {
           persona: profile.persona,
           niche: profile.niche,
@@ -37,6 +41,9 @@ export async function POST(req: NextRequest) {
           preferred_formats: profile.preferred_formats,
           offer_types: profile.offer_types,
           content_pillars: profile.content_pillars,
+          voice_keywords: answers.voice_keywords || [],
+          verbal_territory: profile.verbal_territory || { tone: '', style: '', preferred_vocabulary: [], words_to_avoid: [] },
+          post_objectives: profile.post_objectives || [],
         },
         onboarding: {
           completed_at: new Date().toISOString(),
@@ -44,6 +51,10 @@ export async function POST(req: NextRequest) {
         },
       },
     };
+
+    // Save Brand Anchor top-level columns
+    if (answers.primary_industry) updateData.industry = answers.primary_industry;
+    if (answers.brand_bio) updateData.bio = answers.brand_bio;
 
     // Also update basic profile fields from Step 1 if provided
     if (answers.first_name || answers.last_name) {

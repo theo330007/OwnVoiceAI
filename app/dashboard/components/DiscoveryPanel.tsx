@@ -15,7 +15,9 @@ import {
   Users2,
   ChevronDown,
   ChevronUp,
+  Lightbulb,
 } from 'lucide-react';
+import { IdeasPanel } from './IdeasPanel';
 import { generateStrategicInsight, scrapeUserInstagramTrends } from '@/app/actions/user-trends';
 import { createWorkflow } from '@/app/actions/workflows';
 import { TrendDetailModal } from '@/components/TrendDetailModal';
@@ -27,6 +29,8 @@ interface Props {
   userId: string;
   userIndustries: string[];
   strategicInsights: any[];
+  pillars: { title: string; description: string }[];
+  strategy: Record<string, any>;
 }
 
 const CONTENT_TYPES = [
@@ -328,9 +332,11 @@ export function DiscoveryPanel({
   userId,
   userIndustries,
   strategicInsights,
+  pillars,
+  strategy,
 }: Props) {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<'niche' | 'macro'>('niche');
+  const [activeTab, setActiveTab] = useState<'ideas' | 'niche' | 'macro'>('ideas');
   const [isScraping, setIsScraping] = useState(false);
   const [selectedIndustry, setSelectedIndustry] = useState(userIndustries[0] || '');
   const [localNicheTrends, setLocalNicheTrends] = useState(nicheTrends);
@@ -360,14 +366,25 @@ export function DiscoveryPanel({
       {/* Section header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h2 className="font-serif text-2xl text-sage">Trend Discovery</h2>
+          <h2 className="font-serif text-2xl text-sage">Content Discovery</h2>
           <p className="text-xs text-sage/50 mt-0.5">
-            Not feeling inspired? Check out our Insight specially tailored for your profile
+            Generate ideas for your pillars, or explore what's trending in your niche
           </p>
         </div>
 
         {/* Toggle */}
         <div className="flex items-center gap-1 p-1 bg-sage/5 rounded-2xl">
+          <button
+            onClick={() => setActiveTab('ideas')}
+            className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium transition-all ${
+              activeTab === 'ideas'
+                ? 'bg-white text-sage shadow-soft'
+                : 'text-sage/50 hover:text-sage'
+            }`}
+          >
+            <Lightbulb className="w-3.5 h-3.5" />
+            Idea Generation
+          </button>
           <button
             onClick={() => setActiveTab('niche')}
             className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium transition-all ${
@@ -392,6 +409,11 @@ export function DiscoveryPanel({
           </button>
         </div>
       </div>
+
+      {/* Ideas tab */}
+      {activeTab === 'ideas' && (
+        <IdeasPanel userId={userId} pillars={pillars} strategy={strategy} />
+      )}
 
       {/* Niche scrape controls */}
       {activeTab === 'niche' && (
@@ -428,8 +450,8 @@ export function DiscoveryPanel({
         </div>
       )}
 
-      {/* Trend cards grid */}
-      {displayTrends.length === 0 ? (
+      {/* Trend cards grid (niche + macro only) */}
+      {activeTab !== 'ideas' && (displayTrends.length === 0 ? (
         <div className="flex-1 flex flex-col items-center justify-center text-center py-16">
           {activeTab === 'niche' ? (
             <Target className="w-12 h-12 text-sage/20 mb-4" />
@@ -464,7 +486,7 @@ export function DiscoveryPanel({
             );
           })}
         </div>
-      )}
+      ))}
 
       {/* Macro trend detail modal */}
       <TrendDetailModal

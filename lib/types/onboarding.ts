@@ -35,6 +35,13 @@ export interface OnboardingAnswers {
   // Step 5: Story
   personal_story: string;
   legitimating_experience: string;
+
+  // Step 6: Brand Anchor — Industry
+  primary_industry: string;
+
+  // Step 8: Brand Anchor — Brand Voice
+  brand_bio: string;
+  voice_keywords: string[];
 }
 
 export interface OnboardingStepProps {
@@ -68,4 +75,7 @@ export const EMPTY_ONBOARDING: OnboardingAnswers = {
   content_pillars: [{ title: '', description: '' }],
   personal_story: '',
   legitimating_experience: '',
+  primary_industry: '',
+  brand_bio: '',
+  voice_keywords: [],
 };

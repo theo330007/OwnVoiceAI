@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase';
 import { revalidatePath } from 'next/cache';
+import { getCurrentUser } from '@/lib/auth';
 
 export interface Workflow {
   id: string;
@@ -22,6 +23,69 @@ const CONTENT_TYPE_LABELS = {
   promotional: 'Promotional',
   interactive: 'Interactive',
 };
+
+/**
+ * Create a workflow from an existing idea-based project (no strategic insight)
+ */
+export async function createWorkflowFromProject(projectId: string) {
+  const user = await getCurrentUser();
+  if (!user) throw new Error('User not authenticated');
+
+  const supabase = await createClient();
+
+  // Fetch the project
+  const { data: project, error: projectError } = await supabase
+    .from('projects')
+    .select('*')
+    .eq('id', projectId)
+    .eq('user_id', user.id)
+    .single();
+
+  if (projectError || !project) {
+    throw new Error('Project not found');
+  }
+
+  // Create the workflow pre-seeded with the project's idea content
+  const { data: workflow, error: workflowError } = await supabase
+    .from('content_workflows')
+    .insert({
+      user_id: user.id,
+      strategic_insight_id: null,
+      content_type: project.content_type,
+      project_name: project.title,
+      current_phase: 1,
+      status: 'in_progress',
+      phase_data: {
+        phase1: {
+          hook: project.hook || '',
+          concept: project.concept || '',
+          cta: project.cta || '',
+          trend_title: project.trend_title || '',
+        },
+        phase2: {},
+        phase3: {},
+        phase4: {},
+      },
+    } as any)
+    .select()
+    .single();
+
+  if (workflowError) {
+    throw new Error(`Failed to create workflow: ${workflowError.message}`);
+  }
+
+  // Link the workflow back to the project
+  await supabase
+    .from('projects')
+    .update({ workflow_id: workflow.id, completion_percentage: 10 })
+    .eq('id', projectId)
+    .eq('user_id', user.id);
+
+  revalidatePath('/projects');
+  revalidatePath('/lab');
+
+  return workflow as Workflow;
+}
 
 /**
  * Create a new content workflow

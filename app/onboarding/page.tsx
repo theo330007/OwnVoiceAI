@@ -8,8 +8,13 @@ import OnboardingStep2 from './components/OnboardingStep2';
 import OnboardingStep3 from './components/OnboardingStep3';
 import OnboardingStep4 from './components/OnboardingStep4';
 import OnboardingStep5 from './components/OnboardingStep5';
+import OnboardingStep6 from './components/OnboardingStep6';
+import OnboardingStep7 from './components/OnboardingStep7';
+import OnboardingStep8 from './components/OnboardingStep8';
+import StrategicClarification from './components/StrategicClarification';
 import { EMPTY_ONBOARDING } from '@/lib/types/onboarding';
 import type { OnboardingAnswers } from '@/lib/types/onboarding';
+import type { StrategicProfile } from '@/lib/agents/onboarding-processor';
 import { Loader2, Sparkles } from 'lucide-react';
 
 export default function OnboardingPage() {
@@ -18,13 +23,14 @@ export default function OnboardingPage() {
   const [formData, setFormData] = useState<OnboardingAnswers>(EMPTY_ONBOARDING);
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState('');
+  const [generatedProfile, setGeneratedProfile] = useState<StrategicProfile | null>(null);
 
   const handleChange = (updates: Partial<OnboardingAnswers>) => {
     setFormData((prev) => ({ ...prev, ...updates }));
   };
 
   const handleNext = () => {
-    if (currentStep < 5) {
+    if (currentStep < 8) {
       setCurrentStep(currentStep + 1);
     } else {
       handleSubmit();
@@ -67,12 +73,20 @@ export default function OnboardingPage() {
         throw new Error(data.error || 'Failed to process onboarding');
       }
 
-      router.push('/profile');
+      const data = await res.json();
+      setGeneratedProfile(data.profile);
+      setCurrentStep(9);
     } catch (err: any) {
       setError(err.message || 'Something went wrong. Please try again.');
+    } finally {
       setIsProcessing(false);
     }
   };
+
+  // Strategic Clarification review — no progress bar
+  if (currentStep === 9 && generatedProfile) {
+    return <StrategicClarification profile={generatedProfile} />;
+  }
 
   if (isProcessing) {
     return (
@@ -81,9 +95,9 @@ export default function OnboardingPage() {
           <div className="w-16 h-16 bg-dusty-rose/10 rounded-full flex items-center justify-center mx-auto mb-6">
             <Sparkles className="w-8 h-8 text-dusty-rose animate-pulse" />
           </div>
-          <h2 className="font-serif text-3xl text-sage mb-3">Building your profile...</h2>
+          <h2 className="font-serif text-3xl text-sage mb-3">Building your Brand Anchor...</h2>
           <p className="text-sage/60 mb-6">
-            Our AI is analyzing your answers to create your strategic brand profile. This takes a few seconds.
+            Our AI is analyzing your answers to craft your strategic brand profile. This takes a few seconds.
           </p>
           <Loader2 className="w-6 h-6 text-sage animate-spin mx-auto" />
           {error && (
@@ -125,6 +139,9 @@ export default function OnboardingPage() {
       {currentStep === 3 && <OnboardingStep3 {...stepProps} />}
       {currentStep === 4 && <OnboardingStep4 {...stepProps} />}
       {currentStep === 5 && <OnboardingStep5 {...stepProps} />}
+      {currentStep === 6 && <OnboardingStep6 {...stepProps} />}
+      {currentStep === 7 && <OnboardingStep7 {...stepProps} />}
+      {currentStep === 8 && <OnboardingStep8 {...stepProps} />}
     </div>
   );
 }

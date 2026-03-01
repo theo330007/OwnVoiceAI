@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
-import { LayoutDashboard, FolderOpen, Link2, Settings, LogOut } from 'lucide-react';
+import { LayoutDashboard, FolderOpen, Link2, Settings, LogOut, CalendarDays } from 'lucide-react';
 import { signOut } from '@/lib/auth';
 
 interface Props {
@@ -12,6 +12,7 @@ interface Props {
 const NAV_ITEMS = [
   { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
   { href: '/projects', icon: FolderOpen, label: 'Projects' },
+  { href: '/editorial', icon: CalendarDays, label: 'Editorial' },
   { href: '/integrations', icon: Link2, label: 'Integrations' },
   { href: '/profile', icon: Settings, label: 'Settings' },
 ];

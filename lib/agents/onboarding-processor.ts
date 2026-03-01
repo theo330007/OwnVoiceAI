@@ -19,14 +19,22 @@ export interface StrategicProfile {
   preferred_formats: string[];
   offer_types: string[];
   content_pillars: { title: string; description: string }[];
+  // Editorial Positioning (fully AI-generated)
+  verbal_territory: {
+    tone: string;                   // polished tone-of-voice phrase
+    style: string;                  // communication style sentence
+    preferred_vocabulary: string[]; // 4–6 words/phrases to use
+    words_to_avoid: string[];       // 3–5 terms that clash with positioning
+  };
+  post_objectives: string[]; // subset of: Visibility | Connection | Conversion | Education & Authority
 }
 
 export async function processOnboardingAnswers(answers: OnboardingAnswers): Promise<StrategicProfile> {
   const model = genAI.getGenerativeModel({
-    model: 'gemini-2.0-flash',
+    model: 'gemini-3.1-pro-preview',
     generationConfig: {
-      temperature: 0.7,
-      maxOutputTokens: 4096,
+      temperature: 0.6,
+      maxOutputTokens: 8192,
     },
   });
 
@@ -51,6 +59,7 @@ Analyze the following questionnaire answers and synthesize them into a comprehen
 - Location: ${answers.country}
 - Target Audience Region: ${answers.target_market}
 - Niche Tags: ${answers.niche_tags?.join(', ') || 'Not specified'}
+- Primary Industry: ${answers.primary_industry || 'Not specified'}
 
 ### Offer & Business Model
 - Offer types: ${answers.offer_type?.join(', ') || 'Not specified'}
@@ -65,6 +74,7 @@ Analyze the following questionnaire answers and synthesize them into a comprehen
 ### Content DNA
 - Tone: ${answers.desired_tone}
 - Brand words: ${answers.brand_words?.filter(Boolean).join(', ') || 'Not specified'}
+- Voice keywords: ${answers.voice_keywords?.join(', ') || 'Not specified'}
 - Inspiration accounts: ${answers.inspiration_accounts?.filter(Boolean).join(', ') || 'Not specified'}
 - Preferred formats: ${answers.preferred_format?.join(', ') || 'Not specified'}
 - Content pillars:
@@ -73,6 +83,9 @@ ${contentPillarsText}
 ### Personal Story
 - Origin story: ${answers.personal_story}
 - Credentials: ${answers.legitimating_experience}
+
+### Brand Voice
+- Bio: ${answers.brand_bio || 'Not specified'}
 
 ## YOUR TASK
 
@@ -94,13 +107,25 @@ Return ONLY valid JSON with this exact structure:
   "offer_types": ["type1", "type2"],
   "content_pillars": [
     { "title": "Pillar title", "description": "One sentence describing what this pillar covers." }
-  ]
+  ],
+  "verbal_territory": {
+    "tone": "Polished tone-of-voice phrase synthesizing their raw answers, e.g. 'Expert, warm, occasionally provocative'",
+    "style": "Communication style sentence, e.g. 'Story-driven, science-backed and conversational — bridges clinical expertise with lived experience'",
+    "preferred_vocabulary": ["authentic", "evidence-based", "transform", "reclaim", "nourish"],
+    "words_to_avoid": ["detox", "quick fix", "guru", "hack"]
+  },
+  "post_objectives": ["Visibility", "Connection", "Education & Authority"]
 }
 
 IMPORTANT:
 - For "competitors", extract Instagram handles from inspiration_accounts. If none provided, suggest 3 relevant accounts in their niche.
 - For "hot_news", infer trending topics based on their niche tags and current industry trends.
-- For "content_pillars", if the user provided pillars use and refine them. If they left it empty, synthesize 3-5 pillars from their niche, positioning, and offer.
+- For "content_pillars", synthesize 3–5 HIGHLY SPECIFIC, tailored pillars from all answers. Be original and precise — e.g. "Hormonal Nutrition for Expats", "Gut Reset Protocols", "Nervous System Recovery". Do NOT use generic titles like "Wellness Tips", "Healthy Lifestyle", or "Mindset". If the user provided pillars, refine them to be more specific.
+- For "verbal_territory.tone": Synthesize the user's desired_tone, brand_words, and voice_keywords into one polished phrase.
+- For "verbal_territory.style": Derive from their content formats, persona, tone and origin story — 1 sentence.
+- For "preferred_vocabulary": 4–6 specific words or short phrases that reinforce their brand voice and resonate with their audience.
+- For "words_to_avoid": 3–5 terms that would undermine their positioning, feel off-brand, or overused in their niche.
+- For "post_objectives": Select 2–4 from [Visibility, Connection, Conversion, Education & Authority] based on their offer type, audience relationship, and content formats.
 - Clean up and refine the user's raw answers but preserve their voice and intent.
 - Write in English regardless of the input language.
 - Return ONLY the JSON object, no additional text.`;
@@ -123,6 +148,16 @@ IMPORTANT:
   if (!Array.isArray(parsed.preferred_formats)) parsed.preferred_formats = [];
   if (!Array.isArray(parsed.offer_types)) parsed.offer_types = [];
   if (!Array.isArray(parsed.content_pillars)) parsed.content_pillars = [];
+
+  // Ensure verbal_territory is always a valid object
+  if (!parsed.verbal_territory || typeof parsed.verbal_territory !== 'object') {
+    parsed.verbal_territory = { tone: '', style: '', preferred_vocabulary: [], words_to_avoid: [] };
+  }
+  if (!Array.isArray(parsed.verbal_territory.preferred_vocabulary)) parsed.verbal_territory.preferred_vocabulary = [];
+  if (!Array.isArray(parsed.verbal_territory.words_to_avoid)) parsed.verbal_territory.words_to_avoid = [];
+
+  // Ensure post_objectives is always an array
+  if (!Array.isArray(parsed.post_objectives)) parsed.post_objectives = [];
 
   return parsed;
 }
