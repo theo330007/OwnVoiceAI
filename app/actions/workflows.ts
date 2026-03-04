@@ -50,7 +50,7 @@ export async function createWorkflowFromProject(projectId: string) {
     .from('content_workflows')
     .insert({
       user_id: user.id,
-      strategic_insight_id: null,
+      // strategic_insight_id omitted — workflow created directly from a project idea
       content_type: project.content_type,
       project_name: project.title,
       current_phase: 1,

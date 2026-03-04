@@ -8,7 +8,6 @@ import OnboardingStep2 from './components/OnboardingStep2';
 import OnboardingStep3 from './components/OnboardingStep3';
 import OnboardingStep4 from './components/OnboardingStep4';
 import OnboardingStep5 from './components/OnboardingStep5';
-import OnboardingStep6 from './components/OnboardingStep6';
 import OnboardingStep7 from './components/OnboardingStep7';
 import OnboardingStep8 from './components/OnboardingStep8';
 import StrategicClarification from './components/StrategicClarification';
@@ -30,7 +29,7 @@ export default function OnboardingPage() {
   };
 
   const handleNext = () => {
-    if (currentStep < 8) {
+    if (currentStep < 7) {
       setCurrentStep(currentStep + 1);
     } else {
       handleSubmit();
@@ -139,9 +138,8 @@ export default function OnboardingPage() {
       {currentStep === 3 && <OnboardingStep3 {...stepProps} />}
       {currentStep === 4 && <OnboardingStep4 {...stepProps} />}
       {currentStep === 5 && <OnboardingStep5 {...stepProps} />}
-      {currentStep === 6 && <OnboardingStep6 {...stepProps} />}
-      {currentStep === 7 && <OnboardingStep7 {...stepProps} />}
-      {currentStep === 8 && <OnboardingStep8 {...stepProps} />}
+      {currentStep === 6 && <OnboardingStep7 {...stepProps} />}
+      {currentStep === 7 && <OnboardingStep8 {...stepProps} />}
     </div>
   );
 }

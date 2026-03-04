@@ -148,9 +148,12 @@ export default function WorkflowPage() {
     );
   }
 
-  // Extract content idea for the selected content type
-  const contentIdea = workflow.strategic_insights?.content_ideas?.[workflow.content_type];
-  const trendTitle = workflow.strategic_insights?.trend_title || workflow.project_name;
+  // Extract content idea: prefer strategic insight, fall back to phase_data.phase1 (project-based workflow)
+  const phase1Seed = workflow.phase_data?.phase1;
+  const contentIdea = workflow.strategic_insights?.content_ideas?.[workflow.content_type] || (
+    phase1Seed?.hook ? { hook: phase1Seed.hook, concept: phase1Seed.concept || '', cta: phase1Seed.cta || '' } : undefined
+  );
+  const trendTitle = workflow.strategic_insights?.trend_title || phase1Seed?.trend_title || workflow.project_name;
 
   // Build context for chatbot
   const workflowContext = {

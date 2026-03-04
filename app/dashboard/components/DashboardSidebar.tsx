@@ -10,11 +10,11 @@ interface Props {
 }
 
 const NAV_ITEMS = [
-  { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-  { href: '/projects', icon: FolderOpen, label: 'Projects' },
-  { href: '/editorial', icon: CalendarDays, label: 'Editorial' },
-  { href: '/integrations', icon: Link2, label: 'Integrations' },
-  { href: '/profile', icon: Settings, label: 'Settings' },
+  { href: '/dashboard',   icon: LayoutDashboard, label: 'Dashboard' },
+  { href: '/editorial',   icon: CalendarDays,    label: 'Editorial' },
+  { href: '/projects',    icon: FolderOpen,      label: 'Projects' },
+  { href: '/integrations', icon: Link2,          label: 'Integrations' },
+  { href: '/profile',     icon: Settings,        label: 'Settings' },
 ];
 
 function SidebarItem({

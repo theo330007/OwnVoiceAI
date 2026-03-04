@@ -35,6 +35,7 @@ const PHASE_CONFIG = {
 function ProjectRow({ project }: { project: Project & { notes_count: number } }) {
   const router = useRouter();
   const [starting, setStarting] = useState(false);
+  const [startError, setStartError] = useState<string | null>(null);
 
   const contentCfg = CONTENT_TYPE_CONFIG[project.content_type] ?? CONTENT_TYPE_CONFIG.educational;
   const phaseCfg   = PHASE_CONFIG[project.current_phase]       ?? PHASE_CONFIG.ideation;
@@ -46,10 +47,12 @@ function ProjectRow({ project }: { project: Project & { notes_count: number } })
 
   const handleStart = async () => {
     setStarting(true);
+    setStartError(null);
     try {
       const workflow = await createWorkflowFromProject(project.id);
       router.push(`/lab/workflow/${workflow.id}`);
-    } catch {
+    } catch (err: any) {
+      setStartError(err.message || 'Failed to start workflow');
       setStarting(false);
     }
   };
@@ -123,17 +126,22 @@ function ProjectRow({ project }: { project: Project & { notes_count: number } })
             Open
           </Link>
         ) : (
-          <button
-            onClick={handleStart}
-            disabled={starting}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-sage/8 hover:bg-sage/15 text-sage text-[11px] font-semibold rounded-lg border border-sage/15 transition-colors disabled:opacity-50 whitespace-nowrap"
-          >
-            {starting ? (
-              <><Loader2 className="w-2.5 h-2.5 animate-spin" />Starting…</>
-            ) : (
-              <><Sparkles className="w-2.5 h-2.5" />Start Workflow</>
+          <div className="flex flex-col items-end gap-1">
+            <button
+              onClick={handleStart}
+              disabled={starting}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-sage/8 hover:bg-sage/15 text-sage text-[11px] font-semibold rounded-lg border border-sage/15 transition-colors disabled:opacity-50 whitespace-nowrap"
+            >
+              {starting ? (
+                <><Loader2 className="w-2.5 h-2.5 animate-spin" />Starting…</>
+              ) : (
+                <><Sparkles className="w-2.5 h-2.5" />Start Workflow</>
+              )}
+            </button>
+            {startError && (
+              <p className="text-[10px] text-red-500 max-w-[160px] text-right leading-tight">{startError}</p>
             )}
-          </button>
+          </div>
         )}
       </td>
     </tr>

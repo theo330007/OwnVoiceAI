@@ -611,8 +611,14 @@ export function Phase2AssetOrchestration({
       const refinementContext = isRegeneration ? buildRefinementContext() : '';
       const strategy = userProfile?.metadata?.strategy || {};
 
+      const safeContentIdea = {
+        hook: contentIdea?.hook || trendTitle || '',
+        concept: contentIdea?.concept || '',
+        cta: contentIdea?.cta || '',
+      };
+
       const assets = await generateProductionAssets({
-        trendTitle, contentIdea, contextInfo,
+        trendTitle, contentIdea: safeContentIdea, contextInfo,
         brandStyle: brandStyle || '',
         contentFormat: format, toneStyle: tone, contentAngle: angle,
         refinementContext,

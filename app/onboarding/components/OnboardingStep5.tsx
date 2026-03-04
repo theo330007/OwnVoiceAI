@@ -1,7 +1,6 @@
 'use client';
 
 import type { OnboardingStepProps } from '@/lib/types/onboarding';
-import { Sparkles } from 'lucide-react';
 
 export default function OnboardingStep5({ data, onChange, onNext, onBack, onSkip }: OnboardingStepProps) {
   return (
@@ -56,10 +55,9 @@ export default function OnboardingStep5({ data, onChange, onNext, onBack, onSkip
             </button>
             <button
               onClick={onNext}
-              className="bg-dusty-rose hover:bg-dusty-rose/90 text-cream font-medium px-8 py-3 rounded-2xl transition-colors inline-flex items-center gap-2"
+              className="bg-sage hover:bg-sage/90 text-cream font-medium px-8 py-3 rounded-2xl transition-colors"
             >
-              <Sparkles className="w-4 h-4" />
-              Generate My Profile
+              Continue
             </button>
           </div>
         </div>

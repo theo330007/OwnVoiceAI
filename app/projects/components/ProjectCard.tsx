@@ -62,6 +62,7 @@ const PHASE_CONFIG = {
 export function ProjectCard({ project }: Props) {
   const router = useRouter();
   const [starting, setStarting] = useState(false);
+  const [startError, setStartError] = useState<string | null>(null);
 
   const contentTypeConfig = CONTENT_TYPE_CONFIG[project.content_type];
   const phaseConfig = PHASE_CONFIG[project.current_phase];
@@ -78,10 +79,12 @@ export function ProjectCard({ project }: Props) {
 
   const handleStart = async () => {
     setStarting(true);
+    setStartError(null);
     try {
       const workflow = await createWorkflowFromProject(project.id);
       router.push(`/lab/workflow/${workflow.id}`);
-    } catch {
+    } catch (err: any) {
+      setStartError(err.message || 'Failed to start workflow');
       setStarting(false);
     }
   };
@@ -139,17 +142,22 @@ export function ProjectCard({ project }: Props) {
             Open Workflow
           </Link>
         ) : (
-          <button
-            onClick={handleStart}
-            disabled={starting}
-            className="flex items-center justify-center gap-2 w-full py-2 px-3 bg-sage/8 hover:bg-sage/15 text-sage text-xs font-semibold rounded-xl transition-colors border border-sage/15 disabled:opacity-50"
-          >
-            {starting ? (
-              <><Loader2 className="w-3 h-3 animate-spin" />Starting…</>
-            ) : (
-              <><Sparkles className="w-3 h-3" />Start Workflow</>
+          <>
+            <button
+              onClick={handleStart}
+              disabled={starting}
+              className="flex items-center justify-center gap-2 w-full py-2 px-3 bg-sage/8 hover:bg-sage/15 text-sage text-xs font-semibold rounded-xl transition-colors border border-sage/15 disabled:opacity-50"
+            >
+              {starting ? (
+                <><Loader2 className="w-3 h-3 animate-spin" />Starting…</>
+              ) : (
+                <><Sparkles className="w-3 h-3" />Start Workflow</>
+              )}
+            </button>
+            {startError && (
+              <p className="mt-1.5 text-[10px] text-red-500 text-center leading-tight">{startError}</p>
             )}
-          </button>
+          </>
         )}
       </div>
 

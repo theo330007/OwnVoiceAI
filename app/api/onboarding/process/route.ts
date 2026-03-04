@@ -4,6 +4,25 @@ import { processOnboardingAnswers } from '@/lib/agents/onboarding-processor';
 import { createClient } from '@/lib/supabase';
 import type { OnboardingAnswers } from '@/lib/types/onboarding';
 
+// Maps primary_industry to the 3-level niche_funnel taxonomy used in the profile page
+const INDUSTRY_TO_NICHE_FUNNEL: Record<string, { category: string; subcategory: string; microniche: string }> = {
+  'Fertility & Hormones':     { category: "Health & Wellness", subcategory: "Women's Health",  microniche: "Fertility & Conception" },
+  'Nutrition & Dietetics':    { category: "Health & Wellness", subcategory: "Nutrition",        microniche: "" },
+  'Mental Health & Wellness': { category: "Health & Wellness", subcategory: "Mental Health",    microniche: "" },
+  'Fitness & Movement':       { category: "Health & Wellness", subcategory: "Fitness",          microniche: "" },
+  'Sleep Health':             { category: "Health & Wellness", subcategory: "Mental Health",    microniche: "Sleep Optimization" },
+  'Skin & Beauty':            { category: "Health & Wellness", subcategory: "Holistic Health",  microniche: "" },
+  'Weight Management':        { category: "Health & Wellness", subcategory: "Nutrition",        microniche: "Weight Management" },
+  'Holistic Health':          { category: "Health & Wellness", subcategory: "Holistic Health",  microniche: "" },
+  "Women's Health":           { category: "Health & Wellness", subcategory: "Women's Health",   microniche: "" },
+  'Gut Health':               { category: "Health & Wellness", subcategory: "Nutrition",        microniche: "Gut Health" },
+  'Chronic Disease':          { category: "Health & Wellness", subcategory: "Holistic Health",  microniche: "" },
+  'Stress & Burnout':         { category: "Health & Wellness", subcategory: "Mental Health",    microniche: "Burnout Recovery" },
+  'Mindfulness':              { category: "Health & Wellness", subcategory: "Mental Health",    microniche: "Mindfulness & Meditation" },
+  'Sexual Health':            { category: "Health & Wellness", subcategory: "Women's Health",   microniche: "" },
+  'Aging & Longevity':        { category: "Health & Wellness", subcategory: "Holistic Health",  microniche: "" },
+};
+
 export async function POST(req: NextRequest) {
   try {
     const user = await getCurrentUser();
@@ -27,6 +46,10 @@ export async function POST(req: NextRequest) {
           : answers.primary_industry
           ? [answers.primary_industry]
           : (user.metadata?.industries || []),
+        // Auto-populate 3-level niche funnel from primary_industry for the profile page
+        ...(answers.primary_industry && INDUSTRY_TO_NICHE_FUNNEL[answers.primary_industry]
+          ? { niche_funnel: INDUSTRY_TO_NICHE_FUNNEL[answers.primary_industry] }
+          : {}),
         strategy: {
           persona: profile.persona,
           niche: profile.niche,
@@ -69,6 +92,11 @@ export async function POST(req: NextRequest) {
         ...(answers.instagram ? { instagram: answers.instagram } : {}),
         ...(answers.tiktok ? { tiktok: answers.tiktok } : {}),
       };
+    }
+    // Save instagram_username column so the dashboard connection status shows correctly
+    if (answers.instagram) {
+      const handle = answers.instagram.replace(/^@/, '').trim();
+      if (handle) updateData.instagram_username = handle;
     }
 
     // Update user in database

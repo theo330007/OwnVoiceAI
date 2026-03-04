@@ -43,7 +43,7 @@ interface ContentIdea {
 }
 
 interface Props {
-  contentIdea: ContentIdea;
+  contentIdea?: ContentIdea;
   trendTitle: string;
   products: Product[];
   caseStudies: CaseStudy[];
@@ -124,7 +124,15 @@ export function Phase1ContextualBrief({
   onComplete,
   initialData = {},
 }: Props) {
-  const [currentStep, setCurrentStep] = useState(initialData.contentFormat ? 5 : 1);
+  // If no content idea, skip the "review idea" step (step 1) and go straight to format
+  const hasIdea = !!(contentIdea?.hook || contentIdea?.concept);
+  const firstStep = hasIdea ? 1 : 2;
+  const totalSteps = hasIdea ? TOTAL_STEPS : TOTAL_STEPS - 1;
+  // Map display step → internal step (offset by 1 when no idea)
+  const toInternalStep = (display: number) => (hasIdea ? display : display + 1);
+  const toDisplayStep = (internal: number) => (hasIdea ? internal : internal - 1);
+
+  const [currentStep, setCurrentStep] = useState(initialData.contentFormat ? 5 : firstStep);
   const [contentFormat, setContentFormat] = useState<string>(initialData.contentFormat || '');
   const [toneStyle, setToneStyle] = useState<string>(initialData.toneStyle || '');
   const [contentAngle, setContentAngle] = useState<string>(initialData.contentAngle || '');
@@ -155,16 +163,21 @@ export function Phase1ContextualBrief({
       selectedProduct,
       selectedCaseStudy,
       additionalContext,
+      // Preserve idea fields so phase_data.phase1 stays complete after this step
+      hook: contentIdea?.hook || '',
+      concept: contentIdea?.concept || '',
+      cta: contentIdea?.cta || '',
+      trend_title: trendTitle,
     };
     onComplete(data);
   };
 
   const handleOptionSelect = (setter: (val: string) => void, value: string) => {
     setter(value);
-    setTimeout(() => setCurrentStep((s) => Math.min(s + 1, TOTAL_STEPS)), 300);
+    setTimeout(() => setCurrentStep((s) => Math.min(s + 1, 5)), 300);
   };
 
-  const goBack = () => setCurrentStep((s) => Math.max(s - 1, 1));
+  const goBack = () => setCurrentStep((s) => Math.max(s - 1, firstStep));
   const goNext = () => setCurrentStep((s) => Math.min(s + 1, TOTAL_STEPS));
 
   const canGoNext = () => {
@@ -182,24 +195,28 @@ export function Phase1ContextualBrief({
     <div className="max-w-3xl mx-auto space-y-6">
       {/* Step Progress */}
       <div className="flex items-center justify-center gap-2 mb-2">
-        {Array.from({ length: TOTAL_STEPS }).map((_, i) => (
-          <button
-            key={i}
-            onClick={() => {
-              if (i + 1 <= currentStep) setCurrentStep(i + 1);
-            }}
-            className={`transition-all duration-300 rounded-full ${
-              i + 1 === currentStep
-                ? 'w-8 h-2.5 bg-sage'
-                : i + 1 < currentStep
-                ? 'w-2.5 h-2.5 bg-sage/40 cursor-pointer hover:bg-sage/60'
-                : 'w-2.5 h-2.5 bg-sage/15'
-            }`}
-          />
-        ))}
+        {Array.from({ length: totalSteps }).map((_, i) => {
+          const displayStep = i + 1;
+          const internalStep = toInternalStep(displayStep);
+          return (
+            <button
+              key={i}
+              onClick={() => {
+                if (internalStep <= currentStep) setCurrentStep(internalStep);
+              }}
+              className={`transition-all duration-300 rounded-full ${
+                internalStep === currentStep
+                  ? 'w-8 h-2.5 bg-sage'
+                  : internalStep < currentStep
+                  ? 'w-2.5 h-2.5 bg-sage/40 cursor-pointer hover:bg-sage/60'
+                  : 'w-2.5 h-2.5 bg-sage/15'
+              }`}
+            />
+          );
+        })}
       </div>
       <p className="text-center text-sm text-sage/50 mb-4">
-        Step {currentStep} of {TOTAL_STEPS}
+        Step {toDisplayStep(currentStep)} of {totalSteps}
       </p>
 
       {/* Step 1: Review Content Idea */}

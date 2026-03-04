@@ -3,14 +3,13 @@
 import { Check } from 'lucide-react';
 
 const STEPS = [
-  { number: 1, title: 'Identity', description: 'Who you are' },
-  { number: 2, title: 'Offer', description: 'What you sell' },
-  { number: 3, title: 'Positioning', description: 'Your unique angle' },
-  { number: 4, title: 'Content', description: 'Your brand voice' },
-  { number: 5, title: 'Story', description: 'Your journey' },
-  { number: 6, title: 'Industry', description: 'Primary focus' },
-  { number: 7, title: 'Pillars', description: 'Content themes' },
-  { number: 8, title: 'Voice', description: 'Brand keywords' },
+  { number: 1, title: 'Identity',     description: 'Who you are' },
+  { number: 2, title: 'Offer',        description: 'What you sell' },
+  { number: 3, title: 'Positioning',  description: 'Your unique angle' },
+  { number: 4, title: 'Content',      description: 'Your brand voice' },
+  { number: 5, title: 'Story',        description: 'Your journey' },
+  { number: 6, title: 'Pillars',      description: 'Content themes' },
+  { number: 7, title: 'Voice',        description: 'Brand keywords' },
 ];
 
 interface Props {

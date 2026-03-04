@@ -4,6 +4,24 @@ import { useState } from 'react';
 import { Plus, X } from 'lucide-react';
 import type { OnboardingStepProps } from '@/lib/types/onboarding';
 
+const INDUSTRIES = [
+  { label: 'Fertility & Hormones',     emoji: '🌸' },
+  { label: 'Nutrition & Dietetics',    emoji: '🥗' },
+  { label: 'Mental Health & Wellness', emoji: '🧠' },
+  { label: 'Fitness & Movement',       emoji: '💪' },
+  { label: 'Sleep Health',             emoji: '🌙' },
+  { label: 'Skin & Beauty',            emoji: '✨' },
+  { label: 'Weight Management',        emoji: '⚖️' },
+  { label: 'Holistic Health',          emoji: '🌿' },
+  { label: "Women's Health",           emoji: '♀️' },
+  { label: 'Gut Health',               emoji: '🫀' },
+  { label: 'Chronic Disease',          emoji: '🩺' },
+  { label: 'Stress & Burnout',         emoji: '🧘' },
+  { label: 'Mindfulness',              emoji: '☮️' },
+  { label: 'Sexual Health',            emoji: '💛' },
+  { label: 'Aging & Longevity',        emoji: '🌱' },
+];
+
 const NICHE_OPTIONS = [
   // Health & Wellness
   'Nutrition & Gut Health',
@@ -236,6 +254,36 @@ export default function OnboardingStep1({ data, onChange, onNext, onSkip }: Onbo
             {data.niche_tags && data.niche_tags.length > 0 && (
               <p className="text-xs text-sage/50 mt-2">{data.niche_tags.length} selected</p>
             )}
+          </div>
+
+          {/* Primary Industry — single select */}
+          <div>
+            <label className="block text-sm font-medium text-sage mb-1">
+              Primary Industry <span className="text-dusty-rose">*</span>
+            </label>
+            <p className="text-xs text-sage/50 mb-3">
+              Select your main focus area — drives terminology and powers your trend feed.
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {INDUSTRIES.map(({ label, emoji }) => {
+                const isSelected = data.primary_industry === label;
+                return (
+                  <button
+                    key={label}
+                    type="button"
+                    onClick={() => onChange({ primary_industry: label })}
+                    className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium border transition-all ${
+                      isSelected
+                        ? 'border-dusty-rose bg-dusty-rose/10 text-dusty-rose'
+                        : 'border-sage/15 bg-sage/[0.03] text-sage/70 hover:border-sage/30 hover:text-sage'
+                    }`}
+                  >
+                    <span>{emoji}</span>
+                    <span>{label}</span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </div>
 

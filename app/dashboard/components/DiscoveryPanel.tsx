@@ -223,9 +223,7 @@ function TrendCard({
     <div
       onClick={handleCardClick}
       className={`bg-white rounded-2xl p-5 border transition-all cursor-pointer ${
-        isMacro
-          ? 'border-warm-border hover:border-sage/30 hover:shadow-soft'
-          : isSelected
+        isSelected && !isMacro
           ? 'border-sage ring-2 ring-sage/20 shadow-soft'
           : 'border-warm-border hover:border-sage/30 hover:shadow-soft'
       }`}
@@ -237,7 +235,7 @@ function TrendCard({
             {momentum.label}
           </span>
           {trend.trend_type && (
-            <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-sage/5 text-sage/60">
+            <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-sage/5 text-sage/60">
               {trend.trend_type}
             </span>
           )}

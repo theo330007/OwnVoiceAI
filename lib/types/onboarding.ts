@@ -4,7 +4,7 @@ export interface ContentPillar {
 }
 
 export interface OnboardingAnswers {
-  // Step 1: Identity & Context
+  // Step 1: Identity & Context (includes primary_industry)
   first_name: string;
   last_name: string;
   business_name: string;
@@ -14,6 +14,7 @@ export interface OnboardingAnswers {
   country: string;
   target_market: string; // geographic/language market, e.g. "International English-speaking"
   niche_tags: string[];  // industry/niche tags that drive trend scraping
+  primary_industry: string; // single primary industry, drives terminology + trend feed
 
   // Step 2: Offer & Business Model
   offer_type: string[];
@@ -30,16 +31,15 @@ export interface OnboardingAnswers {
   brand_words: string[];
   inspiration_accounts: string[];
   preferred_format: string[];
-  content_pillars: ContentPillar[];  // 3–5 content pillars
 
   // Step 5: Story
   personal_story: string;
   legitimating_experience: string;
 
-  // Step 6: Brand Anchor — Industry
-  primary_industry: string;
+  // Step 6: Brand Anchor — Content Pillars
+  content_pillars: ContentPillar[];  // 3–5 content pillars
 
-  // Step 8: Brand Anchor — Brand Voice
+  // Step 7: Brand Anchor — Brand Voice
   brand_bio: string;
   voice_keywords: string[];
 }

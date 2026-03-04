@@ -1,8 +1,9 @@
 'use client';
 
-import { Sparkles, Instagram, Video, ChevronRight } from 'lucide-react';
+import { Instagram, Video } from 'lucide-react';
 import { DiscoveryPanel } from './DiscoveryPanel';
 import { HotTopicsWidget } from './HotTopicsWidget';
+import { WelcomeBanner } from './WelcomeBanner';
 import Link from 'next/link';
 import type { Trend } from '@/lib/types';
 
@@ -16,6 +17,7 @@ interface Props {
   userIndustries: string[];
   hotNews: string;
   strategy: Record<string, any>;
+  isFirstVisit: boolean;
 }
 
 function SocialStatusRow({
@@ -67,6 +69,7 @@ export function DashboardShell({
   userIndustries,
   hotNews,
   strategy,
+  isFirstVisit,
 }: Props) {
   const now = new Date();
   const hour = now.getHours();
@@ -91,31 +94,8 @@ export function DashboardShell({
           </h1>
         </div>
 
-        {/* OwnVoice Creation Lab hero tile */}
-        <Link
-          href="/lab"
-          className="group block bg-gradient-to-r from-sage to-dusty-rose rounded-3xl p-6 mb-8 hover:opacity-95 transition-all shadow-soft-lg"
-        >
-          <div className="flex items-center justify-between">
-            <div className="flex items-start gap-4">
-              <div className="w-10 h-10 bg-white/20 rounded-2xl flex items-center justify-center flex-shrink-0 group-hover:bg-white/30 transition-colors mt-0.5">
-                <Sparkles className="w-5 h-5 text-cream" />
-              </div>
-              <div>
-                <p className="font-serif text-xl text-cream font-semibold leading-snug">
-                  OwnVoice Creation Lab
-                </p>
-                <p className="text-sm text-cream/75 mt-1 leading-relaxed">
-                  Validate content ideas, explore trends &amp; create AI-powered scripts tailored to your brand voice.
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2 bg-white/20 hover:bg-white/30 transition-colors text-cream text-sm font-semibold px-4 py-2 rounded-xl ml-6 flex-shrink-0">
-              Open Lab
-              <ChevronRight className="w-4 h-4" />
-            </div>
-          </div>
-        </Link>
+        {/* Welcome banner — first-time users only */}
+        <WelcomeBanner isFirstVisit={isFirstVisit} userName={firstName} />
 
         {/* Main 2-column layout */}
         <div className="flex gap-8">

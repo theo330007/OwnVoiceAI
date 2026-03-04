@@ -32,6 +32,13 @@ export default async function DashboardPage() {
   const strategy = (user.metadata as any)?.strategy || {};
   const hotNews: string = strategy?.hot_news || '';
 
+  // Show welcome banner only if onboarding completed within last 24h and not yet dismissed
+  const onboardingCompletedAt = (user.metadata as any)?.onboarding?.completed_at;
+  const isRecentCompletion =
+    onboardingCompletedAt &&
+    Date.now() - new Date(onboardingCompletedAt).getTime() < 24 * 60 * 60 * 1000;
+  const isFirstVisit = !!(isRecentCompletion && !(user.metadata as any)?.onboarding?.welcome_dismissed);
+
   return (
     <DashboardShell
       user={user}
@@ -43,6 +50,7 @@ export default async function DashboardPage() {
       userIndustries={userIndustries}
       hotNews={hotNews}
       strategy={strategy}
+      isFirstVisit={isFirstVisit}
     />
   );
 }

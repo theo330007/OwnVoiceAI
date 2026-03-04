@@ -344,3 +344,21 @@ export async function deleteProject(projectId: string) {
   revalidatePath('/projects');
   revalidatePath('/dashboard');
 }
+
+export interface ProjectsSummary {
+  total: number;
+  inProgress: number;
+  completed: number;
+}
+
+export async function getProjectsSummary(userId: string): Promise<ProjectsSummary> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc('get_user_project_stats', { p_user_id: userId });
+  if (error || !data?.[0]) return { total: 0, inProgress: 0, completed: 0 };
+  const row = data[0];
+  return {
+    total: row.total_projects ?? 0,
+    inProgress: row.in_progress_projects ?? 0,
+    completed: row.completed_projects ?? 0,
+  };
+}
