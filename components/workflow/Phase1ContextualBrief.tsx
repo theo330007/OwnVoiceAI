@@ -220,7 +220,7 @@ export function Phase1ContextualBrief({
       </p>
 
       {/* Step 1: Review Content Idea */}
-      {currentStep === 1 && (
+      {currentStep === 1 && contentIdea && (
         <Card className="bg-gradient-to-br from-sage/5 to-dusty-rose/5 rounded-3xl shadow-soft p-8 border-2 border-sage/10">
           <div className="flex items-start gap-3 mb-6">
             <Sparkles className="w-6 h-6 text-dusty-rose flex-shrink-0 mt-1" />
