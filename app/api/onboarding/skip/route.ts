@@ -15,11 +15,9 @@ export async function POST(req: NextRequest) {
     const updateData: Record<string, any> = {
       metadata: {
         ...(user.metadata || {}),
-        // Map niche_tags + primary_industry to industries so NicheTrendsPanel picks them up
-        ...(answers.niche_tags?.length
-          ? { industries: answers.niche_tags }
-          : answers.primary_industry
-          ? { industries: [answers.primary_industry] }
+        // Map primary_industry to industries so NicheTrendsPanel picks them up
+        ...(answers.primary_industry?.length
+          ? { industries: answers.primary_industry }
           : {}),
         onboarding: {
           ...(user.metadata?.onboarding || {}),
@@ -45,7 +43,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Save Brand Anchor fields if reached
-    if (answers.primary_industry) updateData.industry = answers.primary_industry;
+    if (answers.primary_industry?.length) updateData.industry = answers.primary_industry.join(', ');
     if (answers.brand_bio) updateData.bio = answers.brand_bio;
 
     const supabase = await createClient();

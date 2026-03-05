@@ -1,6 +1,6 @@
 'use client';
 
-import { Instagram, Video } from 'lucide-react';
+import { Instagram, Video, FlaskConical, TrendingUp, FolderPlus, MessageSquare, ArrowRight } from 'lucide-react';
 import { DiscoveryPanel } from './DiscoveryPanel';
 import { HotTopicsWidget } from './HotTopicsWidget';
 import { WelcomeBanner } from './WelcomeBanner';
@@ -54,6 +54,44 @@ function SocialStatusRow({
           <p className="text-xs font-semibold text-sage">TikTok</p>
           <p className="text-xs text-sage/50">Not connected</p>
         </div>
+      </Link>
+    </div>
+  );
+}
+
+function LabCard() {
+  return (
+    <div className="bg-white border border-warm-border rounded-3xl p-5 shadow-soft">
+      <div className="flex items-center gap-2.5 mb-3">
+        <div className="w-8 h-8 rounded-xl bg-dusty-rose/10 flex items-center justify-center flex-shrink-0">
+          <FlaskConical className="w-4 h-4 text-dusty-rose" />
+        </div>
+        <h3 className="font-serif text-base text-sage">OwnVoice Lab</h3>
+      </div>
+
+      <p className="text-xs text-sage/60 mb-4 leading-relaxed">
+        Your AI-powered content studio. Validate ideas, generate production-ready assets, and launch full content workflows — all grounded in your brand voice.
+      </p>
+
+      <ul className="space-y-2 mb-4">
+        {[
+          { icon: MessageSquare, text: 'Validate ideas with AI analysis' },
+          { icon: TrendingUp,    text: 'Ground content in real trends' },
+          { icon: FolderPlus,   text: 'Turn ideas into full projects' },
+        ].map(({ icon: Icon, text }) => (
+          <li key={text} className="flex items-center gap-2 text-xs text-sage/70">
+            <Icon className="w-3.5 h-3.5 text-sage/40 flex-shrink-0" />
+            {text}
+          </li>
+        ))}
+      </ul>
+
+      <Link
+        href="/lab"
+        className="flex items-center justify-center gap-1.5 w-full py-2.5 bg-dusty-rose hover:bg-dusty-rose/90 text-cream text-sm font-medium rounded-2xl transition-colors"
+      >
+        Open the Lab
+        <ArrowRight className="w-3.5 h-3.5" />
       </Link>
     </div>
   );
@@ -119,6 +157,7 @@ export function DashboardShell({
               instagramUsername={instagramUsername}
             />
             <HotTopicsWidget initialHotNews={hotNews} />
+            <LabCard />
           </div>
         </div>
       </div>

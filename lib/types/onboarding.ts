@@ -4,7 +4,7 @@ export interface ContentPillar {
 }
 
 export interface OnboardingAnswers {
-  // Step 1: Identity & Context (includes primary_industry)
+  // Step 1: Identity & Context
   first_name: string;
   last_name: string;
   business_name: string;
@@ -13,9 +13,8 @@ export interface OnboardingAnswers {
   tiktok: string;
   country: string;
   target_market: string; // geographic/language market, e.g. "International English-speaking"
-  niche_tags: string[];  // industry/niche tags that drive trend scraping
-  primary_industry: string; // single primary industry, drives terminology + trend feed
-  industry_specifics: string; // free-text specificity within the chosen industry
+  primary_industry: string[]; // one or more industries, drives terminology + trend feed
+  industry_specifics: string; // free-text specificity within the chosen industries
 
   // Step 2: Offer & Business Model
   offer_type: string[];
@@ -62,7 +61,8 @@ export const EMPTY_ONBOARDING: OnboardingAnswers = {
   tiktok: '',
   country: '',
   target_market: '',
-  niche_tags: [],
+  primary_industry: [],
+  industry_specifics: '',
   offer_type: [],
   offer_description: '',
   problem_solved: '',
@@ -76,8 +76,6 @@ export const EMPTY_ONBOARDING: OnboardingAnswers = {
   content_pillars: [{ title: '', description: '' }],
   personal_story: '',
   legitimating_experience: '',
-  primary_industry: '',
-  industry_specifics: '',
   brand_bio: '',
   voice_keywords: [],
 };

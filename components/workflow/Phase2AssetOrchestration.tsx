@@ -476,6 +476,9 @@ export function Phase2AssetOrchestration({
   const [currentSceneIdx, setCurrentSceneIdx] = useState(0);
   const [showAdvancedAssets, setShowAdvancedAssets] = useState(false);
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
+  const [selectedHookIdx, setSelectedHookIdx] = useState<number | null>(null);
+  const [showRegenConfirm, setShowRegenConfirm] = useState(false);
+  const [isRegeneratingScript, setIsRegeneratingScript] = useState(false);
 
   useEffect(() => {
     if (!lightboxUrl) return;
@@ -531,6 +534,8 @@ export function Phase2AssetOrchestration({
     }
     if (externalUpdate.hookVariations) setHookVariations(externalUpdate.hookVariations);
     if (externalUpdate.bRollShotList) setBRollShotList(externalUpdate.bRollShotList);
+    // Script arrived — clear regenerating spinner
+    if (externalUpdate.script) setIsRegeneratingScript(false);
   }, [externalUpdate]);
 
   // Notify page of content changes so the chat always has the latest context
@@ -1656,21 +1661,92 @@ ${hookVariations.map((hook, idx) => {
           <div className="flex items-center gap-3 mb-4">
             <Zap className="w-5 h-5 text-sage" />
             <h3 className="font-serif text-xl text-sage">Hook Variations</h3>
-            <span className="text-sm text-sage/40">{hookVariations.length} options — choose your opener</span>
+            <span className="text-sm text-sage/40">{hookVariations.length} options — click one to select</span>
           </div>
           <div className="space-y-3">
-            {hookVariations.map((variation, idx) => (
-              <div key={idx} className="flex items-center justify-between p-3 rounded-2xl border border-sage/10 bg-gradient-to-r from-sage/5 to-dusty-rose/5 gap-3">
-                <div className="flex-1 min-w-0">
-                  <span className="px-2 py-0.5 bg-dusty-rose/20 text-dusty-rose text-xs font-semibold rounded-full uppercase tracking-wide">{variation.type}</span>
-                  <p className="text-sage text-sm leading-relaxed font-medium mt-1.5">{variation.hook}</p>
+            {hookVariations.map((variation, idx) => {
+              const isSelected = selectedHookIdx === idx;
+              return (
+                <div
+                  key={idx}
+                  onClick={() => {
+                    if (isSelected) {
+                      setSelectedHookIdx(null);
+                      setShowRegenConfirm(false);
+                    } else {
+                      setSelectedHookIdx(idx);
+                      setShowRegenConfirm(true);
+                    }
+                  }}
+                  className={`flex items-center justify-between p-3 rounded-2xl border-2 cursor-pointer transition-all gap-3 ${
+                    isSelected
+                      ? 'border-dusty-rose bg-dusty-rose/5 shadow-sm'
+                      : 'border-sage/10 bg-gradient-to-r from-sage/5 to-dusty-rose/5 hover:border-sage/30'
+                  }`}
+                >
+                  <div className="flex-1 min-w-0">
+                    <span className="px-2 py-0.5 bg-dusty-rose/20 text-dusty-rose text-xs font-semibold rounded-full uppercase tracking-wide">{variation.type}</span>
+                    <p className="text-sage text-sm leading-relaxed font-medium mt-1.5">{variation.hook}</p>
+                  </div>
+                  <div className="flex items-center gap-1 flex-shrink-0">
+                    {isSelected && (
+                      <div className="w-5 h-5 rounded-full bg-dusty-rose flex items-center justify-center">
+                        <CheckCircle className="w-3.5 h-3.5 text-cream" />
+                      </div>
+                    )}
+                    <Button
+                      onClick={(e) => { e.stopPropagation(); copyToClipboard(variation.hook, `hook-${idx}`); }}
+                      variant="ghost"
+                      size="sm"
+                      className="text-sage/40 hover:text-sage h-8 w-8 p-0"
+                    >
+                      {copiedItem === `hook-${idx}` ? <CheckCircle className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                    </Button>
+                  </div>
                 </div>
-                <Button onClick={() => copyToClipboard(variation.hook, `hook-${idx}`)} variant="ghost" size="sm" className="text-sage/40 hover:text-sage h-8 w-8 p-0 flex-shrink-0">
-                  {copiedItem === `hook-${idx}` ? <CheckCircle className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                </Button>
-              </div>
-            ))}
+              );
+            })}
           </div>
+
+          {/* Regenerating spinner */}
+          {isRegeneratingScript && (
+            <div className="mt-4 p-4 bg-sage/5 border border-sage/10 rounded-2xl flex items-center gap-3">
+              <Loader2 className="w-4 h-4 text-sage animate-spin flex-shrink-0" />
+              <div>
+                <p className="text-sm text-sage font-medium">Regenerating script…</p>
+                <p className="text-xs text-sage/50">The AI is rewriting your script with the selected hook. This may take a few seconds.</p>
+              </div>
+            </div>
+          )}
+
+          {/* Regenerate confirmation */}
+          {showRegenConfirm && selectedHookIdx !== null && !isRegeneratingScript && (
+            <div className="mt-4 p-4 bg-dusty-rose/5 border border-dusty-rose/20 rounded-2xl">
+              <p className="text-sm text-sage font-medium mb-1">Regenerate the script with this hook?</p>
+              <p className="text-xs text-sage/50 mb-3">The full script will be rewritten using the selected hook as the opener.</p>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => {
+                    if (onModify && selectedHookIdx !== null) {
+                      onModify(`Regenerate the full script using this hook as the opener: "${hookVariations[selectedHookIdx].hook}"`);
+                      setIsRegeneratingScript(true);
+                    }
+                    setShowRegenConfirm(false);
+                    setSelectedHookIdx(null);
+                  }}
+                  className="flex-1 py-2 bg-dusty-rose hover:bg-dusty-rose/90 text-cream text-sm font-medium rounded-xl transition-colors"
+                >
+                  Yes, regenerate
+                </button>
+                <button
+                  onClick={() => { setShowRegenConfirm(false); setSelectedHookIdx(null); }}
+                  className="px-4 py-2 border border-sage/20 hover:border-sage/40 text-sage text-sm font-medium rounded-xl transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
         </Card>
       )}
 

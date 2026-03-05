@@ -1,7 +1,5 @@
 'use client';
 
-import { useState } from 'react';
-import { Plus, X } from 'lucide-react';
 import type { OnboardingStepProps } from '@/lib/types/onboarding';
 
 const INDUSTRIES = [
@@ -17,64 +15,14 @@ const INDUSTRIES = [
   { label: 'Other',                 emoji: '🌐' },
 ];
 
-const NICHE_OPTIONS = [
-  // Health & Wellness
-  'Nutrition & Gut Health',
-  'Fitness & Movement',
-  'Mental Health & Mindset',
-  'Holistic Wellness',
-  "Women's Health",
-  'Weight Loss',
-  'Stress & Burnout',
-  'Perimenopause & Menopause',
-  'Skin & Beauty',
-  // Business & Career
-  'Business Coaching',
-  'Entrepreneurship',
-  'Personal Finance',
-  'Productivity & Time Management',
-  'Career Development',
-  'Leadership',
-  // Tech & Digital
-  'Tech & SaaS',
-  'AI & Automation',
-  'No-Code / Low-Code',
-  'Cybersecurity',
-  'Web3 & Crypto',
-  // Creator & Marketing
-  'Content Creation',
-  'Social Media Marketing',
-  'Personal Branding',
-  'Copywriting',
-  'Email Marketing',
-  // Education & Lifestyle
-  'Life Coaching',
-  'Parenting & Family',
-  'Relationships',
-  'Spirituality',
-  'Travel & Lifestyle',
-];
-
 export default function OnboardingStep1({ data, onChange, onNext, onSkip }: OnboardingStepProps) {
-  const [customInput, setCustomInput] = useState('');
-
-  const toggleNiche = (niche: string) => {
-    const current = data.niche_tags || [];
-    if (current.includes(niche)) {
-      onChange({ niche_tags: current.filter((n) => n !== niche) });
+  const toggleIndustry = (label: string) => {
+    const current = data.primary_industry || [];
+    if (current.includes(label)) {
+      onChange({ primary_industry: current.filter((i) => i !== label) });
     } else {
-      onChange({ niche_tags: [...current, niche] });
+      onChange({ primary_industry: [...current, label] });
     }
-  };
-
-  const addCustomNiche = () => {
-    const value = customInput.trim();
-    if (!value) return;
-    const current = data.niche_tags || [];
-    if (!current.includes(value)) {
-      onChange({ niche_tags: [...current, value] });
-    }
-    setCustomInput('');
   };
 
   return (
@@ -177,96 +125,22 @@ export default function OnboardingStep1({ data, onChange, onNext, onSkip }: Onbo
             </div>
           </div>
 
-          {/* Niche Tags — drives trend scraping */}
-          <div>
-            <label className="block text-sm font-medium text-sage mb-1">
-              Your Niche <span className="text-dusty-rose">*</span>
-            </label>
-            <p className="text-xs text-sage/50 mb-3">
-              Select all that apply or type your own — this powers your personalised trend feed.
-            </p>
-
-            <div className="flex flex-wrap gap-2 mb-3">
-              {NICHE_OPTIONS.map((niche) => (
-                <button
-                  key={niche}
-                  type="button"
-                  onClick={() => toggleNiche(niche)}
-                  className={`px-4 py-2 rounded-2xl text-sm font-medium transition-all ${
-                    data.niche_tags?.includes(niche)
-                      ? 'bg-dusty-rose text-cream'
-                      : 'bg-sage/10 text-sage hover:bg-sage/20'
-                  }`}
-                >
-                  {niche}
-                </button>
-              ))}
-            </div>
-
-            {/* Custom niche input */}
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={customInput}
-                onChange={(e) => setCustomInput(e.target.value)}
-                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addCustomNiche(); } }}
-                placeholder="Add your own niche..."
-                className="flex-1 px-4 py-2.5 rounded-2xl border border-sage/20 focus:border-sage focus:outline-none focus:ring-2 focus:ring-sage/20 transition-all text-sm"
-              />
-              <button
-                type="button"
-                onClick={addCustomNiche}
-                disabled={!customInput.trim()}
-                className="px-3 py-2.5 bg-sage/10 hover:bg-sage/20 text-sage rounded-2xl transition-colors disabled:opacity-40"
-              >
-                <Plus className="w-4 h-4" />
-              </button>
-            </div>
-
-            {/* Custom tags (not in preset list) */}
-            {data.niche_tags?.filter((t) => !NICHE_OPTIONS.includes(t)).length > 0 && (
-              <div className="flex flex-wrap gap-2 mt-2">
-                {data.niche_tags
-                  .filter((t) => !NICHE_OPTIONS.includes(t))
-                  .map((tag) => (
-                    <span
-                      key={tag}
-                      className="flex items-center gap-1.5 px-3 py-1.5 bg-dusty-rose text-cream text-sm font-medium rounded-2xl"
-                    >
-                      {tag}
-                      <button
-                        type="button"
-                        onClick={() => toggleNiche(tag)}
-                        className="text-cream/70 hover:text-cream transition-colors"
-                      >
-                        <X className="w-3 h-3" />
-                      </button>
-                    </span>
-                  ))}
-              </div>
-            )}
-
-            {data.niche_tags && data.niche_tags.length > 0 && (
-              <p className="text-xs text-sage/50 mt-2">{data.niche_tags.length} selected</p>
-            )}
-          </div>
-
-          {/* Primary Industry — single select */}
+          {/* Primary Industry — multi-select */}
           <div>
             <label className="block text-sm font-medium text-sage mb-1">
               Primary Industry <span className="text-dusty-rose">*</span>
             </label>
             <p className="text-xs text-sage/50 mb-3">
-              Pick your broad category, then tell us your specific focus.
+              Select all that apply — this powers your personalised trend feed.
             </p>
             <div className="flex flex-wrap gap-2 mb-3">
               {INDUSTRIES.map(({ label, emoji }) => {
-                const isSelected = data.primary_industry === label;
+                const isSelected = data.primary_industry?.includes(label);
                 return (
                   <button
                     key={label}
                     type="button"
-                    onClick={() => onChange({ primary_industry: label })}
+                    onClick={() => toggleIndustry(label)}
                     className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium border transition-all ${
                       isSelected
                         ? 'border-dusty-rose bg-dusty-rose/10 text-dusty-rose'
@@ -279,7 +153,7 @@ export default function OnboardingStep1({ data, onChange, onNext, onSkip }: Onbo
                 );
               })}
             </div>
-            {data.primary_industry && (
+            {data.primary_industry && data.primary_industry.length > 0 && (
               <div>
                 <label className="block text-xs font-medium text-sage/60 mb-1.5">
                   Be more specific <span className="text-sage/40 font-normal">(optional)</span>
@@ -289,16 +163,7 @@ export default function OnboardingStep1({ data, onChange, onNext, onSkip }: Onbo
                   value={data.industry_specifics || ''}
                   onChange={(e) => onChange({ industry_specifics: e.target.value })}
                   className="w-full px-4 py-2.5 rounded-2xl border border-sage/20 focus:border-sage focus:outline-none focus:ring-2 focus:ring-sage/20 transition-all text-sm"
-                  placeholder={
-                    data.primary_industry === 'Health & Wellness' ? 'e.g. Women\'s gut health, fertility nutrition...' :
-                    data.primary_industry === 'Business & Coaching' ? 'e.g. Executive leadership, solopreneur growth...' :
-                    data.primary_industry === 'Tech & Digital' ? 'e.g. AI tools for small business, no-code apps...' :
-                    data.primary_industry === 'Creator & Marketing' ? 'e.g. Instagram growth, email copywriting...' :
-                    data.primary_industry === 'Education & Training' ? 'e.g. Online language learning, corporate L&D...' :
-                    data.primary_industry === 'Personal Development' ? 'e.g. Anxiety management, habit building...' :
-                    data.primary_industry === 'Finance & Investing' ? 'e.g. Real estate investing, DTC brand finance...' :
-                    'Describe your specific focus area...'
-                  }
+                  placeholder="Describe your specific focus area..."
                 />
               </div>
             )}

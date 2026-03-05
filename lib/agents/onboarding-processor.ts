@@ -58,8 +58,7 @@ Analyze the following questionnaire answers and synthesize them into a comprehen
 - Social: Instagram ${answers.instagram}, TikTok ${answers.tiktok}
 - Location: ${answers.country}
 - Target Audience Region: ${answers.target_market}
-- Niche Tags: ${answers.niche_tags?.join(', ') || 'Not specified'}
-- Primary Industry: ${answers.primary_industry || 'Not specified'}
+- Primary Industry: ${answers.primary_industry?.join(', ') || 'Not specified'}
 
 ### Offer & Business Model
 - Offer types: ${answers.offer_type?.join(', ') || 'Not specified'}
