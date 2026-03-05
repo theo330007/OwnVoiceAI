@@ -20,7 +20,7 @@ import {
 import { IdeasPanel } from './IdeasPanel';
 import { generateStrategicInsight, scrapeUserInstagramTrends } from '@/app/actions/user-trends';
 import { createWorkflow } from '@/app/actions/workflows';
-import { TrendDetailModal } from '@/components/TrendDetailModal';
+import { TrendDetailModal } from '@/components/shared/TrendDetailModal';
 import type { Trend } from '@/lib/types';
 
 interface Props {

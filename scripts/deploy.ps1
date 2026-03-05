@@ -2,4 +2,4 @@
 # Usage: .\deploy.ps1
 # Credentials are read from .env.deploy (gitignored)
 
-python3 deploy.py
+python3 scripts/deploy.py

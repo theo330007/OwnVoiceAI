@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { RefreshCw, TrendingUp } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { TrendDetailModal } from '@/components/TrendDetailModal';
+import { TrendDetailModal } from '@/components/shared/TrendDetailModal';
 import type { Trend } from '@/lib/types';
 
 interface Props {

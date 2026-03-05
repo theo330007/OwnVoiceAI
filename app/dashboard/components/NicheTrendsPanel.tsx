@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { RefreshCw, Target, Instagram, Loader2, Trash2, CheckCircle, AlertCircle, Sparkles } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { TrendDetailModal } from '@/components/TrendDetailModal';
+import { TrendDetailModal } from '@/components/shared/TrendDetailModal';
 import { scrapeUserInstagramTrends, deleteUserNicheTrend, generateStrategicInsight } from '@/app/actions/user-trends';
 import type { Trend } from '@/lib/types';
 

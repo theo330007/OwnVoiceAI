@@ -28,12 +28,12 @@ git push origin main
 
 ## Step 3 — Deploy to Raspberry Pi
 
-Run the PowerShell deploy script:
+Run:
 ```
-powershell.exe -ExecutionPolicy Bypass -File deploy.ps1
+python3 scripts/deploy.py
 ```
 
-This SSHes into `tobidow@raspberryTLC`, pulls the latest code, runs `npm install && npm run build`, and restarts the app with PM2 on port 3010.
+This SSHes into `tobidow@raspberryTLC` using credentials from `.env.deploy`, pulls the latest code, runs `npm install && npm run build`, and restarts the app with PM2 on port 3010.
 
 ## Step 4 — Report
 
