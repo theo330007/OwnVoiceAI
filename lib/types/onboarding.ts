@@ -15,6 +15,7 @@ export interface OnboardingAnswers {
   target_market: string; // geographic/language market, e.g. "International English-speaking"
   niche_tags: string[];  // industry/niche tags that drive trend scraping
   primary_industry: string; // single primary industry, drives terminology + trend feed
+  industry_specifics: string; // free-text specificity within the chosen industry
 
   // Step 2: Offer & Business Model
   offer_type: string[];
@@ -76,6 +77,7 @@ export const EMPTY_ONBOARDING: OnboardingAnswers = {
   personal_story: '',
   legitimating_experience: '',
   primary_industry: '',
+  industry_specifics: '',
   brand_bio: '',
   voice_keywords: [],
 };

@@ -52,7 +52,12 @@ export default function OnboardingStep4({ data, onChange, onNext, onBack, onSkip
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-sage mb-3">3 words that describe your brand</label>
+            <label className="block text-sm font-medium text-sage mb-1">3 words that describe your brand</label>
+            <p className="text-xs text-sage/50 mb-3">
+              Think personality adjectives — how your audience <em>feels</em> when they engage with you.
+              Not what you do, but how you do it.
+              <span className="block mt-1 text-sage/40">e.g. "Scientific · Empowering · Approachable" or "Bold · Luxurious · No-BS"</span>
+            </p>
             <div className="grid grid-cols-3 gap-3">
               {[0, 1, 2].map((i) => (
                 <input
@@ -60,8 +65,8 @@ export default function OnboardingStep4({ data, onChange, onNext, onBack, onSkip
                   type="text"
                   value={data.brand_words?.[i] || ''}
                   onChange={(e) => updateBrandWord(i, e.target.value)}
-                  className="w-full px-4 py-3 rounded-2xl border border-sage/20 focus:border-sage focus:outline-none focus:ring-2 focus:ring-sage/20 transition-all"
-                  placeholder={`Word ${i + 1}`}
+                  className="w-full px-4 py-3 rounded-2xl border border-sage/20 focus:border-sage focus:outline-none focus:ring-2 focus:ring-sage/20 transition-all text-center font-medium"
+                  placeholder={['Word 1', 'Word 2', 'Word 3'][i]}
                 />
               ))}
             </div>

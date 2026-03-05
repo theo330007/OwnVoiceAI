@@ -5,21 +5,16 @@ import { Plus, X } from 'lucide-react';
 import type { OnboardingStepProps } from '@/lib/types/onboarding';
 
 const INDUSTRIES = [
-  { label: 'Fertility & Hormones',     emoji: '🌸' },
-  { label: 'Nutrition & Dietetics',    emoji: '🥗' },
-  { label: 'Mental Health & Wellness', emoji: '🧠' },
-  { label: 'Fitness & Movement',       emoji: '💪' },
-  { label: 'Sleep Health',             emoji: '🌙' },
-  { label: 'Skin & Beauty',            emoji: '✨' },
-  { label: 'Weight Management',        emoji: '⚖️' },
-  { label: 'Holistic Health',          emoji: '🌿' },
-  { label: "Women's Health",           emoji: '♀️' },
-  { label: 'Gut Health',               emoji: '🫀' },
-  { label: 'Chronic Disease',          emoji: '🩺' },
-  { label: 'Stress & Burnout',         emoji: '🧘' },
-  { label: 'Mindfulness',              emoji: '☮️' },
-  { label: 'Sexual Health',            emoji: '💛' },
-  { label: 'Aging & Longevity',        emoji: '🌱' },
+  { label: 'Health & Wellness',     emoji: '🌿' },
+  { label: 'Business & Coaching',   emoji: '💼' },
+  { label: 'Tech & Digital',        emoji: '💻' },
+  { label: 'Creator & Marketing',   emoji: '🎙️' },
+  { label: 'Education & Training',  emoji: '🎓' },
+  { label: 'Personal Development',  emoji: '🧠' },
+  { label: 'Lifestyle & Culture',   emoji: '✨' },
+  { label: 'Science & Research',    emoji: '🔬' },
+  { label: 'Finance & Investing',   emoji: '📈' },
+  { label: 'Other',                 emoji: '🌐' },
 ];
 
 const NICHE_OPTIONS = [
@@ -262,9 +257,9 @@ export default function OnboardingStep1({ data, onChange, onNext, onSkip }: Onbo
               Primary Industry <span className="text-dusty-rose">*</span>
             </label>
             <p className="text-xs text-sage/50 mb-3">
-              Select your main focus area — drives terminology and powers your trend feed.
+              Pick your broad category, then tell us your specific focus.
             </p>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-2 mb-3">
               {INDUSTRIES.map(({ label, emoji }) => {
                 const isSelected = data.primary_industry === label;
                 return (
@@ -284,6 +279,29 @@ export default function OnboardingStep1({ data, onChange, onNext, onSkip }: Onbo
                 );
               })}
             </div>
+            {data.primary_industry && (
+              <div>
+                <label className="block text-xs font-medium text-sage/60 mb-1.5">
+                  Be more specific <span className="text-sage/40 font-normal">(optional)</span>
+                </label>
+                <input
+                  type="text"
+                  value={data.industry_specifics || ''}
+                  onChange={(e) => onChange({ industry_specifics: e.target.value })}
+                  className="w-full px-4 py-2.5 rounded-2xl border border-sage/20 focus:border-sage focus:outline-none focus:ring-2 focus:ring-sage/20 transition-all text-sm"
+                  placeholder={
+                    data.primary_industry === 'Health & Wellness' ? 'e.g. Women\'s gut health, fertility nutrition...' :
+                    data.primary_industry === 'Business & Coaching' ? 'e.g. Executive leadership, solopreneur growth...' :
+                    data.primary_industry === 'Tech & Digital' ? 'e.g. AI tools for small business, no-code apps...' :
+                    data.primary_industry === 'Creator & Marketing' ? 'e.g. Instagram growth, email copywriting...' :
+                    data.primary_industry === 'Education & Training' ? 'e.g. Online language learning, corporate L&D...' :
+                    data.primary_industry === 'Personal Development' ? 'e.g. Anxiety management, habit building...' :
+                    data.primary_industry === 'Finance & Investing' ? 'e.g. Real estate investing, DTC brand finance...' :
+                    'Describe your specific focus area...'
+                  }
+                />
+              </div>
+            )}
           </div>
         </div>
 

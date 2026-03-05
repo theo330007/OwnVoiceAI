@@ -49,18 +49,6 @@ export default function OnboardingStep3({ data, onChange, onNext, onBack, onSkip
             />
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-sage mb-1.5">
-              How are you different from others?
-            </label>
-            <textarea
-              value={data.differentiation}
-              onChange={(e) => onChange({ differentiation: e.target.value })}
-              rows={3}
-              className="w-full px-4 py-3 rounded-2xl border border-sage/20 focus:border-sage focus:outline-none focus:ring-2 focus:ring-sage/20 transition-all resize-none"
-              placeholder="Your unique approach, method, perspective..."
-            />
-          </div>
         </div>
 
         <div className="flex items-center justify-between mt-10">
