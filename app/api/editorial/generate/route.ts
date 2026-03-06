@@ -12,6 +12,14 @@ const CADENCE_DAYS: Record<number, string[]> = {
   7: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'],
 };
 
+function nextMonday(): string {
+  const d = new Date();
+  const day = d.getDay(); // 0=Sun
+  const diff = day === 1 ? 0 : day === 0 ? 1 : 8 - day;
+  d.setDate(d.getDate() + diff);
+  return d.toISOString().split('T')[0];
+}
+
 export async function POST(request: Request) {
   try {
     const user = await getCurrentUser();
@@ -19,7 +27,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { cadence, mix } = await request.json();
+    const { cadence, mix, routine } = await request.json();
 
     if (!cadence || !mix || !CADENCE_DAYS[cadence]) {
       return NextResponse.json({ error: 'Invalid cadence or mix' }, { status: 400 });
@@ -37,7 +45,20 @@ export async function POST(request: Request) {
 
     const pillars: { title: string; description: string }[] = strategy.content_pillars || [];
     const objectives: string[] = strategy.post_objectives || [];
+    const userNews: { title: string }[] = (user.metadata as any)?.user_news ?? [];
     const days = CADENCE_DAYS[cadence];
+    const startDate = nextMonday();
+
+    // Fetch recent niche trends to weave into the plan
+    const supabaseEarly = await createClient();
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+    const { data: recentTrends } = await supabaseEarly
+      .from('trends')
+      .select('title, description')
+      .gte('created_at', sevenDaysAgo)
+      .gte('relevance_score', 65)
+      .order('relevance_score', { ascending: false })
+      .limit(3);
 
     const pillarsText = pillars.length > 0
       ? pillars.map(p => `- ${p.title}${p.description ? `: ${p.description}` : ''}`).join('\n')
@@ -110,7 +131,13 @@ CRITICAL RULES:
 - objective field must be one of: Visibility, Connection, Conversion, Education & Authority
 - contentType must be one of: Value, Authority, Sales
 - format must be one of: Reel, Carousel, Story, Static Post, Live, Newsletter
-- Return ONLY raw JSON — no \`\`\`json fences, no preamble`;
+- Return ONLY raw JSON — no \`\`\`json fences, no preamble${routine?.length
+  ? `\n\nDay Routine — apply this EVERY week, same pillar+vibe for each day:\n${(routine as { day: string; pillar: string; vibe: string }[]).map(r => `- ${r.day}: pillar="${r.pillar}", vibe="${r.vibe}"`).join('\n')}`
+  : ''}${userNews.length
+  ? `\n\nCreator's own hot topics — prioritise weaving these into the plan:\n${userNews.slice(0, 5).map(n => `- ${n.title}`).join('\n')}`
+  : ''}${recentTrends?.length
+  ? `\n\nBreaking niche news this week — weave 1–2 of these naturally into topics:\n${recentTrends.map(t => `- ${t.title}`).join('\n')}`
+  : ''}`;
 
     const result = await model.generateContent(prompt);
     let raw = result.response.text().trim();
@@ -130,10 +157,11 @@ CRITICAL RULES:
     parsed.generated_at = new Date().toISOString();
     parsed.cadence = cadence;
     parsed.mix = mix;
+    parsed.start_date = startDate;
+    if (routine?.length) parsed.routine = routine;
 
     // Persist to Supabase
-    const supabase = await createClient();
-    const { error } = await supabase
+    const { error } = await supabaseEarly
       .from('users')
       .update({
         metadata: {

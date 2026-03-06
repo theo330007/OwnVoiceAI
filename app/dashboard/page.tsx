@@ -30,7 +30,7 @@ export default async function DashboardPage() {
     (user.industry ? [user.industry] : []);
 
   const strategy = (user.metadata as any)?.strategy || {};
-  const hotNews: string = strategy?.hot_news || '';
+  const userNews = (user.metadata as any)?.user_news ?? [];
 
   // Show welcome banner only if onboarding completed within last 24h and not yet dismissed
   const onboardingCompletedAt = (user.metadata as any)?.onboarding?.completed_at;
@@ -48,7 +48,7 @@ export default async function DashboardPage() {
       instagramConnected={!!user.instagram_username}
       instagramUsername={user.instagram_username ?? null}
       userIndustries={userIndustries}
-      hotNews={hotNews}
+      userNews={userNews}
       strategy={strategy}
       isFirstVisit={isFirstVisit}
     />

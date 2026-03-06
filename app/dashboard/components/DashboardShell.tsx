@@ -1,8 +1,8 @@
 'use client';
 
-import { Instagram, Video, FlaskConical, TrendingUp, FolderPlus, MessageSquare, ArrowRight } from 'lucide-react';
+import { Instagram, Video, FlaskConical, TrendingUp, FolderPlus, MessageSquare, ArrowRight, CalendarDays, Sparkles, CheckCircle2 } from 'lucide-react';
 import { DiscoveryPanel } from './DiscoveryPanel';
-import { HotTopicsWidget } from './HotTopicsWidget';
+import { HotTopicsWidget, type UserNewsItem } from './HotTopicsWidget';
 import { WelcomeBanner } from './WelcomeBanner';
 import Link from 'next/link';
 import type { Trend } from '@/lib/types';
@@ -15,7 +15,7 @@ interface Props {
   instagramConnected: boolean;
   instagramUsername: string | null;
   userIndustries: string[];
-  hotNews: string;
+  userNews: UserNewsItem[];
   strategy: Record<string, any>;
   isFirstVisit: boolean;
 }
@@ -54,6 +54,44 @@ function SocialStatusRow({
           <p className="text-xs font-semibold text-sage">TikTok</p>
           <p className="text-xs text-sage/50">Not connected</p>
         </div>
+      </Link>
+    </div>
+  );
+}
+
+function EditorialCard({ hasExistingPlan }: { hasExistingPlan: boolean }) {
+  return (
+    <div className="bg-white border border-warm-border rounded-3xl p-5 shadow-soft">
+      <div className="flex items-center gap-2.5 mb-3">
+        <div className="w-8 h-8 rounded-xl bg-sage/10 flex items-center justify-center flex-shrink-0">
+          <CalendarDays className="w-4 h-4 text-sage" />
+        </div>
+        <h3 className="font-serif text-base text-sage">Editorial Calendar</h3>
+      </div>
+
+      <p className="text-xs text-sage/60 mb-4 leading-relaxed">
+        Your 4-week content architecture — plan pillar rotation, content mix, and posting cadence so every week has a clear strategic purpose.
+      </p>
+
+      <ul className="space-y-2 mb-4">
+        {[
+          { icon: Sparkles,      text: 'AI-generated 4-week content plan' },
+          { icon: TrendingUp,    text: 'Weaves in your hot topics & trends' },
+          { icon: CheckCircle2,  text: 'Click any slot to create a post' },
+        ].map(({ icon: Icon, text }) => (
+          <li key={text} className="flex items-center gap-2 text-xs text-sage/70">
+            <Icon className="w-3.5 h-3.5 text-sage/40 flex-shrink-0" />
+            {text}
+          </li>
+        ))}
+      </ul>
+
+      <Link
+        href="/editorial"
+        className="flex items-center justify-center gap-1.5 w-full py-2.5 bg-sage hover:bg-sage/90 text-cream text-sm font-medium rounded-2xl transition-colors"
+      >
+        {hasExistingPlan ? 'View My Calendar' : 'Plan My Month'}
+        <ArrowRight className="w-3.5 h-3.5" />
       </Link>
     </div>
   );
@@ -105,7 +143,7 @@ export function DashboardShell({
   instagramConnected,
   instagramUsername,
   userIndustries,
-  hotNews,
+  userNews,
   strategy,
   isFirstVisit,
 }: Props) {
@@ -120,6 +158,8 @@ export function DashboardShell({
     month: 'long',
     day: 'numeric',
   });
+
+  const hasExistingPlan = !!(user?.metadata as any)?.editorial_plan;
 
   return (
     <div className="min-h-screen bg-cream">
@@ -156,7 +196,8 @@ export function DashboardShell({
               instagramConnected={instagramConnected}
               instagramUsername={instagramUsername}
             />
-            <HotTopicsWidget initialHotNews={hotNews} />
+            <EditorialCard hasExistingPlan={hasExistingPlan} />
+            <HotTopicsWidget initialUserNews={userNews} />
             <LabCard />
           </div>
         </div>
