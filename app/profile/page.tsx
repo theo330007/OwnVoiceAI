@@ -398,16 +398,18 @@ export default function ProfilePage() {
           <div className="hidden lg:flex items-center gap-5 shrink-0">
             <p className="text-[10px] font-semibold text-sage/40 uppercase tracking-wider">Creator Assets</p>
             <div className="flex items-center gap-2">
-              {creatorFaceUrl ? <img src={creatorFaceUrl} alt="Face" className="w-10 h-10 rounded-full object-cover border-2 border-sage/10" /> : <div className="w-10 h-10 rounded-full bg-sage/5 border-2 border-dashed border-sage/15 flex items-center justify-center"><User className="w-4 h-4 text-sage/25" /></div>}
-              <button onClick={() => faceInputRef.current?.click()} disabled={isUploadingFace} className="flex items-center gap-1 px-2.5 py-1.5 bg-sage/10 hover:bg-sage/20 text-sage text-[11px] font-medium rounded-xl transition-colors disabled:opacity-50">
-                {isUploadingFace ? <Loader2 className="w-3 h-3 animate-spin" /> : <><Upload className="w-3 h-3" /> Face</>}
-              </button>
+              <div className="w-10 h-10 rounded-full bg-sage/5 border-2 border-dashed border-sage/15 flex items-center justify-center"><User className="w-4 h-4 text-sage/25" /></div>
+              <div className="flex flex-col gap-0.5">
+                <span className="text-[10px] font-medium text-sage/50">Profile picture</span>
+                <span className="text-[9px] font-semibold text-amber-500 uppercase tracking-wider">Coming soon</span>
+              </div>
             </div>
             <div className="flex items-center gap-2">
-              {creatorVoiceUrl ? <div className="w-10 h-10 rounded-full bg-dusty-rose/10 border-2 border-dusty-rose/20 flex items-center justify-center"><Headphones className="w-4 h-4 text-dusty-rose" /></div> : <div className="w-10 h-10 rounded-full bg-sage/5 border-2 border-dashed border-sage/15 flex items-center justify-center"><Headphones className="w-4 h-4 text-sage/25" /></div>}
-              <button onClick={() => voiceInputRef.current?.click()} disabled={isUploadingVoice} className="flex items-center gap-1 px-2.5 py-1.5 bg-sage/10 hover:bg-sage/20 text-sage text-[11px] font-medium rounded-xl transition-colors disabled:opacity-50">
-                {isUploadingVoice ? <Loader2 className="w-3 h-3 animate-spin" /> : <><Upload className="w-3 h-3" /> Voice</>}
-              </button>
+              <div className="w-10 h-10 rounded-full bg-sage/5 border-2 border-dashed border-sage/15 flex items-center justify-center"><Headphones className="w-4 h-4 text-sage/25" /></div>
+              <div className="flex flex-col gap-0.5">
+                <span className="text-[10px] font-medium text-sage/50">Voice sample</span>
+                <span className="text-[9px] font-semibold text-amber-500 uppercase tracking-wider">Coming soon</span>
+              </div>
             </div>
           </div>
         </div>
@@ -862,16 +864,18 @@ export default function ProfilePage() {
               </h3>
               <div className="flex gap-6">
                 <div className="flex items-center gap-3">
-                  {creatorFaceUrl ? <img src={creatorFaceUrl} alt="Face" className="w-12 h-12 rounded-full object-cover border-2 border-sage/10" /> : <div className="w-12 h-12 rounded-full bg-sage/5 border-2 border-dashed border-sage/15 flex items-center justify-center"><User className="w-5 h-5 text-sage/25" /></div>}
-                  <button onClick={() => faceInputRef.current?.click()} disabled={isUploadingFace} className="flex items-center gap-1.5 px-3 py-1.5 bg-sage/10 hover:bg-sage/20 text-sage text-xs font-medium rounded-xl transition-colors disabled:opacity-50">
-                    {isUploadingFace ? <><Loader2 className="w-3 h-3 animate-spin" /> Uploading</> : <><Upload className="w-3 h-3" /> {creatorFaceUrl ? 'Change' : 'Face'}</>}
-                  </button>
+                  <div className="w-12 h-12 rounded-full bg-sage/5 border-2 border-dashed border-sage/15 flex items-center justify-center"><User className="w-5 h-5 text-sage/25" /></div>
+                  <div className="flex flex-col gap-0.5">
+                    <span className="text-xs font-medium text-sage/50">Profile picture</span>
+                    <span className="text-[10px] font-semibold text-amber-500 uppercase tracking-wider">Coming soon</span>
+                  </div>
                 </div>
                 <div className="flex items-center gap-3">
-                  {creatorVoiceUrl ? <div className="w-12 h-12 rounded-full bg-dusty-rose/10 border-2 border-dusty-rose/20 flex items-center justify-center"><Headphones className="w-5 h-5 text-dusty-rose" /></div> : <div className="w-12 h-12 rounded-full bg-sage/5 border-2 border-dashed border-sage/15 flex items-center justify-center"><Headphones className="w-5 h-5 text-sage/25" /></div>}
-                  <button onClick={() => voiceInputRef.current?.click()} disabled={isUploadingVoice} className="flex items-center gap-1.5 px-3 py-1.5 bg-sage/10 hover:bg-sage/20 text-sage text-xs font-medium rounded-xl transition-colors disabled:opacity-50">
-                    {isUploadingVoice ? <><Loader2 className="w-3 h-3 animate-spin" /> Uploading</> : <><Upload className="w-3 h-3" /> {creatorVoiceUrl ? 'Change' : 'Voice'}</>}
-                  </button>
+                  <div className="w-12 h-12 rounded-full bg-sage/5 border-2 border-dashed border-sage/15 flex items-center justify-center"><Headphones className="w-5 h-5 text-sage/25" /></div>
+                  <div className="flex flex-col gap-0.5">
+                    <span className="text-xs font-medium text-sage/50">Voice sample</span>
+                    <span className="text-[10px] font-semibold text-amber-500 uppercase tracking-wider">Coming soon</span>
+                  </div>
                 </div>
               </div>
             </div>

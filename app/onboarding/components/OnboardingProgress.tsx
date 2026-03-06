@@ -9,7 +9,6 @@ const STEPS = [
   { number: 4, title: 'Content',      description: 'Your brand voice' },
   { number: 5, title: 'Story',        description: 'Your journey' },
   { number: 6, title: 'Pillars',      description: 'Content themes' },
-  { number: 7, title: 'Voice',        description: 'Brand keywords' },
 ];
 
 interface Props {

@@ -338,7 +338,7 @@ export function EditorialCalendar({ userId, pillars, objectives, nicheContext, e
       const res = await fetch('/api/editorial/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ cadence, mix, routine }),
+        body: JSON.stringify({ cadence, mix, routine, targetYear: viewMonth.year, targetMonth: viewMonth.month }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to generate plan');
@@ -575,7 +575,7 @@ export function EditorialCalendar({ userId, pillars, objectives, nicheContext, e
             {isGenerating ? (
               <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Generating…</>
             ) : plan ? (
-              <><RefreshCcw className="w-3.5 h-3.5" /> Regenerate</>
+              <><RefreshCcw className="w-3.5 h-3.5" /> Generate</>
             ) : (
               <><Sparkles className="w-3.5 h-3.5" /> Generate My Month</>
             )}

@@ -12,12 +12,15 @@ const CADENCE_DAYS: Record<number, string[]> = {
   7: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'],
 };
 
-function nextMonday(): string {
-  const d = new Date();
-  const day = d.getDay(); // 0=Sun
-  const diff = day === 1 ? 0 : day === 0 ? 1 : 8 - day;
+function firstMondayOfMonth(year: number, month: number): string {
+  const d = new Date(year, month, 1);
+  const dow = d.getDay(); // 0=Sun, 1=Mon, ...
+  const diff = dow === 1 ? 0 : dow === 0 ? 1 : 8 - dow;
   d.setDate(d.getDate() + diff);
-  return d.toISOString().split('T')[0];
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
 }
 
 export async function POST(request: Request) {
@@ -27,7 +30,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { cadence, mix, routine } = await request.json();
+    const { cadence, mix, routine, targetYear, targetMonth } = await request.json();
 
     if (!cadence || !mix || !CADENCE_DAYS[cadence]) {
       return NextResponse.json({ error: 'Invalid cadence or mix' }, { status: 400 });
@@ -47,7 +50,10 @@ export async function POST(request: Request) {
     const objectives: string[] = strategy.post_objectives || [];
     const userNews: { title: string }[] = (user.metadata as any)?.user_news ?? [];
     const days = CADENCE_DAYS[cadence];
-    const startDate = nextMonday();
+    const now = new Date();
+    const year = typeof targetYear === 'number' ? targetYear : now.getFullYear();
+    const month = typeof targetMonth === 'number' ? targetMonth : now.getMonth();
+    const startDate = firstMondayOfMonth(year, month);
 
     // Fetch recent niche trends to weave into the plan
     const supabaseEarly = await createClient();
