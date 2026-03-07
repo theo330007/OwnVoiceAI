@@ -2,8 +2,9 @@
 
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
-import { LayoutDashboard, FolderOpen, Link2, Settings, LogOut, CalendarDays, Lightbulb } from 'lucide-react';
+import { LayoutDashboard, FolderOpen, Link2, Settings, LogOut, CalendarDays, Lightbulb, FlaskConical } from 'lucide-react';
 import { signOut } from '@/lib/auth';
+import { HelpChatWidget } from '@/components/HelpChatWidget';
 
 interface Props {
   user: any;
@@ -14,6 +15,7 @@ const NAV_ITEMS = [
   { href: '/editorial',   icon: CalendarDays,    label: 'Editorial' },
   { href: '/discover',    icon: Lightbulb,       label: 'Discover' },
   { href: '/projects',    icon: FolderOpen,      label: 'Projects' },
+  { href: '/lab',         icon: FlaskConical,    label: 'OwnVoice Lab' },
   { href: '/integrations', icon: Link2,          label: 'Integrations' },
   { href: '/profile',     icon: Settings,        label: 'Settings' },
 ];
@@ -53,6 +55,16 @@ export function DashboardSidebar({ user }: Props) {
   const pathname = usePathname();
   const router = useRouter();
 
+  const userCtx = user ? [
+    (user.metadata as any)?.strategy?.niche && `Niche: ${(user.metadata as any).strategy.niche}`,
+    (user.metadata as any)?.niche_funnel?.microniche && `Micro-niche: ${(user.metadata as any).niche_funnel.microniche}`,
+    (user.metadata as any)?.strategy?.persona && `Persona: ${(user.metadata as any).strategy.persona}`,
+    (user.metadata as any)?.editorial_plan ? 'Has an editorial plan.' : 'No editorial plan yet.',
+    (user.metadata as any)?.strategy?.content_pillars?.length
+      ? `Content pillars: ${(user.metadata as any).strategy.content_pillars.map((p: any) => p.title).join(', ')}`
+      : 'No content pillars set yet.',
+  ].filter(Boolean).join(' | ') : undefined;
+
   const handleLogout = async () => {
     try {
       await signOut();
@@ -63,6 +75,7 @@ export function DashboardSidebar({ user }: Props) {
   };
 
   return (
+    <>
     <aside className="fixed left-0 top-0 h-full w-16 bg-white border-r border-warm-border flex flex-col items-center py-4 z-30">
       {/* Logo */}
       <Link href="/dashboard" className="mb-8 flex items-center justify-center">
@@ -104,5 +117,7 @@ export function DashboardSidebar({ user }: Props) {
         </button>
       </div>
     </aside>
+    <HelpChatWidget userContext={userCtx} />
+    </>
   );
 }

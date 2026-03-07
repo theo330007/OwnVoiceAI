@@ -319,6 +319,8 @@ export function EditorialCalendar({ userId, pillars, objectives, nicheContext, e
   );
   const [dismissedTrends, setDismissedTrends] = useState<Set<string>>(new Set());
   const [newPostDate, setNewPostDate] = useState<Date | null>(null);
+  const [dragItem, setDragItem] = useState<{ weekIdx: number; postIdx: number } | null>(null);
+  const [dragOverDate, setDragOverDate] = useState<string | null>(null);
 
   // Derived values
   const datePostMap = plan
@@ -511,6 +513,47 @@ export function EditorialCalendar({ userId, pillars, objectives, nicheContext, e
     };
     setPlan(updated);
     setNewPostDate(null);
+    setIsSaving(true);
+    try {
+      await fetch('/api/editorial/update', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ plan: updated }),
+      });
+    } catch {}
+    setIsSaving(false);
+  };
+
+  const handleDropPost = async (targetDate: Date) => {
+    if (!dragItem || !plan?.start_date) return;
+    const { weekIdx: oldWi, postIdx: oldPi } = dragItem;
+
+    const startMs = parseLocalDate(plan.start_date).getTime();
+    const diffDays = Math.floor((targetDate.getTime() - startMs) / 86400_000);
+    const newWi = Math.floor(diffDays / 7);
+    const newDay = DAY_NAMES_ORDERED[targetDate.getDay()];
+
+    if (newWi < 0 || newWi >= plan.weeks.length) return;
+    const movedPost = plan.weeks[oldWi]?.posts[oldPi];
+    if (!movedPost) return;
+    if (newWi === oldWi && movedPost.day === newDay) return;
+
+    const updatedPost = { ...movedPost, day: newDay };
+    const updated: EditorialPlan = {
+      ...plan,
+      weeks: plan.weeks.map((w, wi) => {
+        if (wi === oldWi && wi === newWi) {
+          return { ...w, posts: w.posts.map((p, pi) => pi === oldPi ? updatedPost : p) };
+        }
+        if (wi === oldWi) return { ...w, posts: w.posts.filter((_, pi) => pi !== oldPi) };
+        if (wi === newWi) return { ...w, posts: [...w.posts, updatedPost] };
+        return w;
+      }),
+    };
+
+    setPlan(updated);
+    setDragItem(null);
+    setDragOverDate(null);
     setIsSaving(true);
     try {
       await fetch('/api/editorial/update', {
@@ -813,7 +856,10 @@ export function EditorialCalendar({ userId, pillars, objectives, nicheContext, e
                 return (
                   <div
                     key={dateStr}
-                    className={`group min-h-[90px] p-1.5 border-b border-sage/8 ${!isLastInRow ? 'border-r border-sage/8' : ''} ${isWeekend ? 'bg-sage/[0.012]' : ''}`}
+                    className={`group min-h-[90px] p-1.5 border-b border-sage/8 ${!isLastInRow ? 'border-r border-sage/8' : ''} ${isWeekend ? 'bg-sage/[0.012]' : ''} ${dragOverDate === dateStr ? 'ring-2 ring-inset ring-sage/30 bg-sage/[0.04]' : ''} transition-colors`}
+                    onDragOver={!hideControls && plan ? (e) => { e.preventDefault(); setDragOverDate(dateStr); } : undefined}
+                    onDragLeave={!hideControls ? () => setDragOverDate(null) : undefined}
+                    onDrop={!hideControls && plan ? (e) => { e.preventDefault(); handleDropPost(date); } : undefined}
                   >
                     {/* Day number */}
                     <div className="mb-1">
@@ -852,7 +898,13 @@ export function EditorialCalendar({ userId, pillars, objectives, nicheContext, e
                         <button
                           key={`${wi}-${pi}`}
                           onClick={() => setModalPost({ post, weekIdx: wi, postIdx: pi, dateStr })}
-                          className={`w-full text-left px-1.5 py-0.5 mb-0.5 rounded text-[10px] truncate transition-colors ${style.chip}`}
+                          draggable={!hideControls}
+                          onDragStart={!hideControls ? (e) => {
+                            setDragItem({ weekIdx: wi, postIdx: pi });
+                            e.dataTransfer.effectAllowed = 'move';
+                          } : undefined}
+                          onDragEnd={() => { setDragItem(null); setDragOverDate(null); }}
+                          className={`w-full text-left px-1.5 py-0.5 mb-0.5 rounded text-[10px] truncate transition-colors ${style.chip} ${!hideControls ? 'cursor-grab active:cursor-grabbing' : ''} ${dragItem?.weekIdx === wi && dragItem?.postIdx === pi ? 'opacity-40' : ''}`}
                         >
                           {post.event_tag ? `${post.event_tag.split(' ')[0]} ` : ''}{post.topic}
                         </button>
