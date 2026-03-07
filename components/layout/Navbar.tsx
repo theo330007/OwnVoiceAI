@@ -37,7 +37,7 @@ export function Navbar({ user }: NavbarProps) {
   };
 
   // Don't show navbar where the sidebar is active (replaces it)
-  const SIDEBAR_ROUTES = ['/dashboard', '/lab', '/projects', '/profile', '/integrations'];
+  const SIDEBAR_ROUTES = ['/dashboard', '/lab', '/projects', '/profile', '/integrations', '/discover'];
   if (
     pathname === '/' ||
     pathname?.startsWith('/auth') ||
@@ -100,6 +100,18 @@ export function Navbar({ user }: NavbarProps) {
             >
               Projects
             </Link>
+            {user.role !== 'admin' && (
+              <Link
+                href="/discover"
+                className={`text-sm font-medium transition-colors ${
+                  pathname?.startsWith('/discover')
+                    ? 'text-sage'
+                    : 'text-sage/60 hover:text-sage'
+                }`}
+              >
+                Discover
+              </Link>
+            )}
             {user.role !== 'admin' && (
               <Link
                 href="/lab"

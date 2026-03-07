@@ -4,7 +4,11 @@ import { getUserProjects } from '@/app/actions/projects';
 import { EditorialCalendar } from './components/EditorialCalendar';
 import { createClient } from '@/lib/supabase';
 
-export default async function EditorialPage() {
+export default async function EditorialPage({
+  searchParams,
+}: {
+  searchParams: { month?: string; openSettings?: string };
+}) {
   const user = await getCurrentUser();
   if (!user) redirect('/auth/login');
 
@@ -40,6 +44,14 @@ export default async function EditorialPage() {
     recentTrends = data ?? [];
   } catch {}
 
+  // Parse ?month=YYYY-MM and ?openSettings=1 from dashboard redirect
+  let initialMonth: { year: number; month: number } | undefined;
+  if (searchParams.month) {
+    const [y, m] = searchParams.month.split('-').map(Number);
+    if (!isNaN(y) && !isNaN(m)) initialMonth = { year: y, month: m - 1 };
+  }
+  const openSettings = searchParams.openSettings === '1';
+
   return (
     <div className="min-h-screen bg-cream">
       <div className="max-w-7xl mx-auto px-6 py-10">
@@ -57,6 +69,8 @@ export default async function EditorialPage() {
           existingPlan={existingPlan}
           projects={projects}
           recentTrends={recentTrends}
+          initialMonth={initialMonth}
+          openSettings={openSettings}
         />
       </div>
     </div>

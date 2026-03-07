@@ -63,6 +63,9 @@ interface Props {
   existingPlan: EditorialPlan | null;
   projects: Project[];
   recentTrends: TrendItem[];
+  hideControls?: boolean;
+  initialMonth?: { year: number; month: number };
+  openSettings?: boolean;
 }
 
 // ─── Constants ───────────────────────────────────────────────────────────────
@@ -288,7 +291,7 @@ function ProjectPicker({
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
-export function EditorialCalendar({ userId, pillars, objectives, nicheContext, existingPlan, projects, recentTrends }: Props) {
+export function EditorialCalendar({ userId, pillars, objectives, nicheContext, existingPlan, projects, recentTrends, hideControls = false, initialMonth, openSettings = false }: Props) {
   const [cadence, setCadence] = useState(existingPlan?.cadence ?? 4);
   const [mix, setMix] = useState(existingPlan?.mix ?? { value: 50, authority: 30, sales: 20 });
   const [activeMixPreset, setActiveMixPreset] = useState<string | null>(
@@ -303,10 +306,11 @@ export function EditorialCalendar({ userId, pillars, objectives, nicheContext, e
   const [error, setError] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'monthly' | 'routine'>('monthly');
   const [viewMonth, setViewMonth] = useState<{ year: number; month: number }>(() => {
+    if (initialMonth) return initialMonth;
     const d = existingPlan?.start_date ? parseLocalDate(existingPlan.start_date) : new Date();
     return { year: d.getFullYear(), month: d.getMonth() };
   });
-  const [showControls, setShowControls] = useState(!existingPlan);
+  const [showControls, setShowControls] = useState(openSettings || !existingPlan);
   const [modalPost, setModalPost] = useState<{
     post: PostSlot; weekIdx: number; postIdx: number; dateStr: string;
   } | null>(null);
@@ -524,23 +528,30 @@ export function EditorialCalendar({ userId, pillars, objectives, nicheContext, e
     <div className="space-y-4">
       {/* Compact top bar */}
       <div className="flex flex-wrap items-center gap-3">
-        {/* View toggle */}
-        <div className="flex gap-1 p-1 bg-white border border-warm-border rounded-xl shadow-soft">
-          {(['monthly', 'routine'] as const).map(mode => (
-            <button
-              key={mode}
-              onClick={() => setViewMode(mode)}
-              className={`px-3.5 py-1.5 rounded-lg text-xs font-medium capitalize transition-all ${
-                viewMode === mode ? 'bg-sage text-cream shadow-sm' : 'text-sage/50 hover:text-sage'
-              }`}
-            >
-              {mode}
-            </button>
-          ))}
-        </div>
+        {/* Title — dashboard mode only */}
+        {hideControls && (
+          <h2 className="font-serif text-lg text-sage">My Content Calendar</h2>
+        )}
 
-        {/* Current settings summary */}
-        {plan && !showControls && (
+        {/* View toggle — hidden in dashboard mode */}
+        {!hideControls && (
+          <div className="flex gap-1 p-1 bg-white border border-warm-border rounded-xl shadow-soft">
+            {(['monthly', 'routine'] as const).map(mode => (
+              <button
+                key={mode}
+                onClick={() => setViewMode(mode)}
+                className={`px-3.5 py-1.5 rounded-lg text-xs font-medium capitalize transition-all ${
+                  viewMode === mode ? 'bg-sage text-cream shadow-sm' : 'text-sage/50 hover:text-sage'
+                }`}
+              >
+                {mode}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Current settings summary — editorial page only */}
+        {!hideControls && plan && !showControls && (
           <div className="flex items-center gap-2">
             <span className="px-2.5 py-1.5 bg-white border border-warm-border rounded-xl text-xs text-sage/60 shadow-soft">
               {cadence}×/week
@@ -551,13 +562,15 @@ export function EditorialCalendar({ userId, pillars, objectives, nicheContext, e
           </div>
         )}
 
-        <button
-          onClick={() => setShowControls(v => !v)}
-          className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-warm-border rounded-xl text-xs text-sage/50 hover:text-sage hover:border-sage/30 transition-colors shadow-soft"
-        >
-          <Settings2 className="w-3.5 h-3.5" />
-          {showControls ? 'Hide settings' : 'Settings'}
-        </button>
+        {!hideControls && (
+          <button
+            onClick={() => setShowControls(v => !v)}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-warm-border rounded-xl text-xs text-sage/50 hover:text-sage hover:border-sage/30 transition-colors shadow-soft"
+          >
+            <Settings2 className="w-3.5 h-3.5" />
+            {showControls ? 'Hide settings' : 'Settings'}
+          </button>
+        )}
 
         {isSaving && (
           <span className="flex items-center gap-1.5 text-[11px] text-sage/40">
@@ -566,25 +579,36 @@ export function EditorialCalendar({ userId, pillars, objectives, nicheContext, e
         )}
 
         <div className="ml-auto flex items-center gap-2">
-          {error && <p className="text-xs text-red-500">{error}</p>}
-          <button
-            onClick={handleGenerate}
-            disabled={isGenerating}
-            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-sage to-sage/80 hover:from-sage/90 hover:to-sage/70 text-cream text-xs font-medium rounded-xl transition-all disabled:opacity-60 shadow-sm"
-          >
-            {isGenerating ? (
-              <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Generating…</>
-            ) : plan ? (
-              <><RefreshCcw className="w-3.5 h-3.5" /> Generate</>
-            ) : (
-              <><Sparkles className="w-3.5 h-3.5" /> Generate My Month</>
-            )}
-          </button>
+          {!hideControls && error && <p className="text-xs text-red-500">{error}</p>}
+          {hideControls ? (
+            <Link
+              href="/editorial"
+              className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-sage to-sage/80 hover:from-sage/90 hover:to-sage/70 text-cream text-xs font-semibold rounded-xl transition-all shadow-sm"
+              title="Adjust cadence, content mix and regenerate your plan on the Editorial page"
+            >
+              <Settings2 className="w-3.5 h-3.5" />
+              Configure &amp; Generate
+            </Link>
+          ) : (
+            <button
+              onClick={handleGenerate}
+              disabled={isGenerating}
+              className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-sage to-sage/80 hover:from-sage/90 hover:to-sage/70 text-cream text-xs font-medium rounded-xl transition-all disabled:opacity-60 shadow-sm"
+            >
+              {isGenerating ? (
+                <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Generating…</>
+              ) : plan ? (
+                <><RefreshCcw className="w-3.5 h-3.5" /> Generate</>
+              ) : (
+                <><Sparkles className="w-3.5 h-3.5" /> Generate My Month</>
+              )}
+            </button>
+          )}
         </div>
       </div>
 
       {/* Expanded settings panel */}
-      {showControls && (
+      {showControls && !hideControls && (
         <div className="bg-white border border-warm-border rounded-3xl p-5 shadow-soft">
           {noPillars && (
             <div className="mb-4 p-3 bg-amber-50 border border-amber-100 rounded-2xl">
@@ -602,7 +626,7 @@ export function EditorialCalendar({ userId, pillars, objectives, nicheContext, e
                 {CADENCE_OPTIONS.map(opt => (
                   <button
                     key={opt.value}
-                    onClick={() => setCadence(opt.value)}
+                    onClick={() => { setCadence(opt.value); setRoutine(suggestRoutine(pillars, CADENCE_DAYS[opt.value] ?? [])); }}
                     className={`px-3.5 py-1.5 rounded-xl text-sm font-medium border transition-all ${
                       cadence === opt.value
                         ? 'bg-sage text-cream border-sage shadow-sm'
@@ -652,9 +676,24 @@ export function EditorialCalendar({ userId, pillars, objectives, nicheContext, e
       {/* Routine view */}
       {viewMode === 'routine' && (
         <div className="bg-white border border-warm-border rounded-3xl p-6 shadow-soft">
-          <p className="text-xs text-sage/50 mb-5">
-            OwnVoice suggested this routine based on your pillars — edit it, then regenerate to apply.
-          </p>
+          <div className="flex items-center justify-between mb-5">
+            <p className="text-xs text-sage/50">
+              OwnVoice suggested this routine based on your pillars — edit it, then regenerate to apply.
+            </p>
+            {routineChanged && (
+              <button
+                onClick={handleGenerate}
+                disabled={isGenerating}
+                className="ml-4 flex-shrink-0 flex items-center gap-2 px-5 py-2.5 bg-sage hover:bg-sage/90 text-cream text-sm font-medium rounded-xl disabled:opacity-60"
+              >
+                {isGenerating ? (
+                  <><Loader2 className="w-4 h-4 animate-spin" /> Generating…</>
+                ) : (
+                  <><Sparkles className="w-4 h-4" /> Regenerate with this routine</>
+                )}
+              </button>
+            )}
+          </div>
           <div
             className="grid gap-4"
             style={{ gridTemplateColumns: `repeat(${Math.max(routine.length, 1)}, minmax(0, 1fr))` }}
@@ -698,21 +737,6 @@ export function EditorialCalendar({ userId, pillars, objectives, nicheContext, e
               </div>
             ))}
           </div>
-          {routineChanged && (
-            <div className="mt-5 pt-5 border-t border-sage/10 flex justify-end">
-              <button
-                onClick={handleGenerate}
-                disabled={isGenerating}
-                className="flex items-center gap-2 px-5 py-2.5 bg-sage hover:bg-sage/90 text-cream text-sm font-medium rounded-xl disabled:opacity-60"
-              >
-                {isGenerating ? (
-                  <><Loader2 className="w-4 h-4 animate-spin" /> Generating…</>
-                ) : (
-                  <><Sparkles className="w-4 h-4" /> Regenerate with this routine</>
-                )}
-              </button>
-            </div>
-          )}
         </div>
       )}
 
@@ -720,11 +744,11 @@ export function EditorialCalendar({ userId, pillars, objectives, nicheContext, e
       {viewMode === 'monthly' && (
         <div>
           {/* Strategic notes */}
-          {plan?.strategic_notes && (
+          {plan?.strategic_notes && !hideControls && (
             <div className="mb-5 bg-gradient-to-br from-sage/5 to-dusty-rose/5 border border-sage/10 rounded-3xl p-5">
               <div className="flex items-start gap-3">
                 <Sparkles className="w-4 h-4 text-dusty-rose flex-shrink-0 mt-0.5" />
-                <p className="text-sm text-sage/80 leading-relaxed italic">{plan.strategic_notes}</p>
+                <p className="text-sm text-sage/80 leading-relaxed italic line-clamp-2">{plan.strategic_notes}</p>
               </div>
               <p className="text-[10px] text-sage/30 mt-2">
                 Generated {new Date(plan.generated_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}
@@ -732,7 +756,6 @@ export function EditorialCalendar({ userId, pillars, objectives, nicheContext, e
               </p>
             </div>
           )}
-
           {/* Month navigation */}
           <div className="flex items-center justify-between mb-4">
             <button
@@ -894,14 +917,24 @@ export function EditorialCalendar({ userId, pillars, objectives, nicheContext, e
               <p className="text-sage/50 text-sm mb-3">
                 No posts scheduled for {MONTH_NAMES[viewMonth.month]} {viewMonth.year}.
               </p>
-              <button
-                onClick={handleGenerate}
-                disabled={isGenerating}
-                className="inline-flex items-center gap-2 px-5 py-2.5 bg-sage hover:bg-sage/90 text-cream text-sm font-medium rounded-xl transition-colors disabled:opacity-60"
-              >
-                <Sparkles className="w-4 h-4" />
-                Extend plan to cover this month
-              </button>
+              {hideControls ? (
+                <Link
+                  href={`/editorial?month=${viewMonth.year}-${String(viewMonth.month + 1).padStart(2, '0')}&openSettings=1`}
+                  className="inline-flex items-center gap-2 px-5 py-2.5 bg-sage hover:bg-sage/90 text-cream text-sm font-medium rounded-xl transition-colors"
+                >
+                  <Settings2 className="w-4 h-4" />
+                  Configure &amp; generate for {MONTH_NAMES[viewMonth.month]}
+                </Link>
+              ) : (
+                <button
+                  onClick={handleGenerate}
+                  disabled={isGenerating}
+                  className="inline-flex items-center gap-2 px-5 py-2.5 bg-sage hover:bg-sage/90 text-cream text-sm font-medium rounded-xl transition-colors disabled:opacity-60"
+                >
+                  <Sparkles className="w-4 h-4" />
+                  Extend plan to cover this month
+                </button>
+              )}
             </div>
           )}
 

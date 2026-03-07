@@ -1,23 +1,26 @@
 'use client';
 
-import { Instagram, Video, FlaskConical, TrendingUp, FolderPlus, MessageSquare, ArrowRight, CalendarDays, Sparkles, CheckCircle2 } from 'lucide-react';
-import { DiscoveryPanel } from './DiscoveryPanel';
+import { Instagram, Video, FlaskConical, TrendingUp, FolderPlus, MessageSquare, ArrowRight, Sparkles, Lightbulb } from 'lucide-react';
+import { EditorialCalendar } from '@/app/editorial/components/EditorialCalendar';
 import { HotTopicsWidget, type UserNewsItem } from './HotTopicsWidget';
 import { WelcomeBanner } from './WelcomeBanner';
 import Link from 'next/link';
-import type { Trend } from '@/lib/types';
+import type { Project } from '@/app/actions/projects';
+
+interface TrendItem { id: string; title: string; description: string; }
 
 interface Props {
   user: any;
-  macroTrends: Trend[];
-  nicheTrends: Trend[];
-  strategicInsights: any[];
   instagramConnected: boolean;
   instagramUsername: string | null;
-  userIndustries: string[];
   userNews: UserNewsItem[];
-  strategy: Record<string, any>;
   isFirstVisit: boolean;
+  pillars: { title: string; description: string }[];
+  objectives: string[];
+  nicheContext: string;
+  existingPlan: any;
+  projects: Project[];
+  recentTrends: TrendItem[];
 }
 
 function SocialStatusRow({
@@ -59,25 +62,25 @@ function SocialStatusRow({
   );
 }
 
-function EditorialCard({ hasExistingPlan }: { hasExistingPlan: boolean }) {
+function DiscoverCard() {
   return (
     <div className="bg-white border border-warm-border rounded-3xl p-5 shadow-soft">
       <div className="flex items-center gap-2.5 mb-3">
-        <div className="w-8 h-8 rounded-xl bg-sage/10 flex items-center justify-center flex-shrink-0">
-          <CalendarDays className="w-4 h-4 text-sage" />
+        <div className="w-8 h-8 rounded-xl bg-dusty-rose/10 flex items-center justify-center flex-shrink-0">
+          <Lightbulb className="w-4 h-4 text-dusty-rose" />
         </div>
-        <h3 className="font-serif text-base text-sage">Editorial Calendar</h3>
+        <h3 className="font-serif text-base text-sage">Discover</h3>
       </div>
 
       <p className="text-xs text-sage/60 mb-4 leading-relaxed">
-        Your 4-week content architecture — plan pillar rotation, content mix, and posting cadence so every week has a clear strategic purpose.
+        Explore macro trends, niche signals, and AI-generated content ideas tailored to your brand strategy.
       </p>
 
       <ul className="space-y-2 mb-4">
         {[
-          { icon: Sparkles,      text: 'AI-generated 4-week content plan' },
-          { icon: TrendingUp,    text: 'Weaves in your hot topics & trends' },
-          { icon: CheckCircle2,  text: 'Click any slot to create a post' },
+          { icon: TrendingUp,    text: 'Macro & niche trend radar' },
+          { icon: Sparkles,      text: 'AI idea generation' },
+          { icon: MessageSquare, text: 'Strategic content angles' },
         ].map(({ icon: Icon, text }) => (
           <li key={text} className="flex items-center gap-2 text-xs text-sage/70">
             <Icon className="w-3.5 h-3.5 text-sage/40 flex-shrink-0" />
@@ -87,10 +90,10 @@ function EditorialCard({ hasExistingPlan }: { hasExistingPlan: boolean }) {
       </ul>
 
       <Link
-        href="/editorial"
-        className="flex items-center justify-center gap-1.5 w-full py-2.5 bg-sage hover:bg-sage/90 text-cream text-sm font-medium rounded-2xl transition-colors"
+        href="/discover"
+        className="flex items-center justify-center gap-1.5 w-full py-2.5 bg-dusty-rose hover:bg-dusty-rose/90 text-cream text-sm font-medium rounded-2xl transition-colors"
       >
-        {hasExistingPlan ? 'View My Calendar' : 'Plan My Month'}
+        Explore Ideas
         <ArrowRight className="w-3.5 h-3.5" />
       </Link>
     </div>
@@ -137,15 +140,16 @@ function LabCard() {
 
 export function DashboardShell({
   user,
-  macroTrends,
-  nicheTrends,
-  strategicInsights,
   instagramConnected,
   instagramUsername,
-  userIndustries,
   userNews,
-  strategy,
   isFirstVisit,
+  pillars,
+  objectives,
+  nicheContext,
+  existingPlan,
+  projects,
+  recentTrends,
 }: Props) {
   const now = new Date();
   const hour = now.getHours();
@@ -158,8 +162,6 @@ export function DashboardShell({
     month: 'long',
     day: 'numeric',
   });
-
-  const hasExistingPlan = !!(user?.metadata as any)?.editorial_plan;
 
   return (
     <div className="min-h-screen bg-cream">
@@ -177,16 +179,17 @@ export function DashboardShell({
 
         {/* Main 2-column layout */}
         <div className="flex gap-8">
-          {/* Left: Discovery (flex-1) */}
+          {/* Left: Editorial Calendar (flex-1) */}
           <div className="flex-1 min-w-0">
-            <DiscoveryPanel
-              macroTrends={macroTrends}
-              nicheTrends={nicheTrends}
+            <EditorialCalendar
               userId={user.id}
-              userIndustries={userIndustries}
-              strategicInsights={strategicInsights}
-              pillars={strategy.content_pillars || []}
-              strategy={strategy}
+              pillars={pillars}
+              objectives={objectives}
+              nicheContext={nicheContext}
+              existingPlan={existingPlan}
+              projects={projects}
+              recentTrends={recentTrends}
+              hideControls
             />
           </div>
 
@@ -196,7 +199,7 @@ export function DashboardShell({
               instagramConnected={instagramConnected}
               instagramUsername={instagramUsername}
             />
-            <EditorialCard hasExistingPlan={hasExistingPlan} />
+            <DiscoverCard />
             <HotTopicsWidget initialUserNews={userNews} />
             <LabCard />
           </div>

@@ -1,7 +1,7 @@
-import { getTrendsByLayer } from '@/app/actions/trends';
-import { getUserNicheTrends, getStrategicInsights } from '@/app/actions/user-trends';
 import { requireAuth, getCurrentUser } from '@/lib/auth';
 import { redirect } from 'next/navigation';
+import { getUserProjects } from '@/app/actions/projects';
+import { createClient } from '@/lib/supabase';
 import { DashboardShell } from './components/DashboardShell';
 
 export default async function DashboardPage() {
@@ -19,18 +19,35 @@ export default async function DashboardPage() {
     redirect('/onboarding');
   }
 
-  const [macroTrends, nicheTrends, strategicInsights] = await Promise.all([
-    getTrendsByLayer('macro'),
-    getUserNicheTrends(user.id),
-    getStrategicInsights(user.id),
-  ]);
-
-  const userIndustries =
-    (user.metadata as any)?.industries ||
-    (user.industry ? [user.industry] : []);
-
   const strategy = (user.metadata as any)?.strategy || {};
+  const niche_funnel = (user.metadata as any)?.niche_funnel || {};
+  const industries: string[] = (user.metadata as any)?.industries || [];
   const userNews = (user.metadata as any)?.user_news ?? [];
+
+  const nicheContext = niche_funnel?.microniche
+    ? `${niche_funnel.category} > ${niche_funnel.subcategory} > ${niche_funnel.microniche}`
+    : niche_funnel?.subcategory
+    ? `${niche_funnel.category} > ${niche_funnel.subcategory}`
+    : industries.filter(Boolean).join(', ') || strategy.niche || 'wellness & personal development';
+
+  const existingPlan = (user.metadata as any)?.editorial_plan || null;
+
+  let projects: Awaited<ReturnType<typeof getUserProjects>> = [];
+  try { projects = await getUserProjects(); } catch {}
+
+  let recentTrends: { id: string; title: string; description: string }[] = [];
+  try {
+    const supabase = await createClient();
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+    const { data } = await supabase
+      .from('trends')
+      .select('id, title, description')
+      .gte('created_at', sevenDaysAgo)
+      .gte('relevance_score', 65)
+      .order('relevance_score', { ascending: false })
+      .limit(5);
+    recentTrends = data ?? [];
+  } catch {}
 
   // Show welcome banner only if onboarding completed within last 24h and not yet dismissed
   const onboardingCompletedAt = (user.metadata as any)?.onboarding?.completed_at;
@@ -42,15 +59,16 @@ export default async function DashboardPage() {
   return (
     <DashboardShell
       user={user}
-      macroTrends={macroTrends}
-      nicheTrends={nicheTrends}
-      strategicInsights={strategicInsights}
       instagramConnected={!!user.instagram_username}
       instagramUsername={user.instagram_username ?? null}
-      userIndustries={userIndustries}
       userNews={userNews}
-      strategy={strategy}
       isFirstVisit={isFirstVisit}
+      pillars={strategy.content_pillars || []}
+      objectives={strategy.post_objectives || []}
+      nicheContext={nicheContext}
+      existingPlan={existingPlan}
+      projects={projects}
+      recentTrends={recentTrends}
     />
   );
 }
