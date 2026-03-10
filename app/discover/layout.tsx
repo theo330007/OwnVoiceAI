@@ -11,7 +11,7 @@ export default async function DiscoverLayout({
   return (
     <div className="flex min-h-screen bg-cream">
       <DashboardSidebar user={user} />
-      <main className="flex-1 ml-16">{children}</main>
+      <main className="flex-1 ml-16 pt-14">{children}</main>
     </div>
   );
 }

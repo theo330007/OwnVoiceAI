@@ -5,6 +5,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import { LayoutDashboard, FolderOpen, Link2, Settings, LogOut, CalendarDays, Lightbulb, FlaskConical } from 'lucide-react';
 import { signOut } from '@/lib/auth';
 import { HelpChatWidget } from '@/components/HelpChatWidget';
+import { TopBar } from '@/components/layout/TopBar';
 
 interface Props {
   user: any;
@@ -117,6 +118,7 @@ export function DashboardSidebar({ user }: Props) {
         </button>
       </div>
     </aside>
+    <TopBar user={user} />
     <HelpChatWidget userContext={userCtx} />
     </>
   );
