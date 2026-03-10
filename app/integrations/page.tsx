@@ -128,17 +128,12 @@ export default function IntegrationsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-cream py-12 px-8">
-      <div className="max-w-3xl mx-auto">
+    <div className="min-h-screen bg-cream">
+      <div className="px-8 py-8">
         {/* Header */}
-        <div className="mb-10">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="w-9 h-9 bg-sage rounded-2xl flex items-center justify-center">
-              <Link2 className="w-4 h-4 text-cream" />
-            </div>
-            <h1 className="font-serif text-4xl text-sage">Integrations</h1>
-          </div>
-          <p className="text-sage/50 ml-12">
+        <div className="mb-8">
+          <h1 className="font-serif text-4xl text-sage">Integrations</h1>
+          <p className="text-sage/50 text-sm mt-1">
             Connect your social platforms to unlock trend scraping and cross-platform analytics.
           </p>
         </div>

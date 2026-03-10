@@ -340,18 +340,18 @@ export default function ProfilePage() {
 
   // ── Render ───────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-cream py-12 px-6">
+    <div className="min-h-screen bg-cream">
       {/* Hidden file inputs — rendered once */}
       <input ref={faceInputRef} type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) handleCreatorAssetUpload('face', f); e.target.value = ''; }} />
       <input ref={voiceInputRef} type="file" accept="audio/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) handleCreatorAssetUpload('voice', f); e.target.value = ''; }} />
 
-      <div className="max-w-6xl mx-auto">
+      <div className="px-8 py-8">
 
         {/* ── Page Header ── */}
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="font-serif text-4xl text-sage mb-1">My Profile</h1>
-            <p className="text-sage/50 text-sm">Manage your account and brand strategy</p>
+            <h1 className="font-serif text-4xl text-sage">My Profile</h1>
+            <p className="text-sage/50 text-sm mt-1">Manage your account and brand strategy</p>
           </div>
           <div className="flex gap-3">
             {isEditing ? (
@@ -380,7 +380,7 @@ export default function ProfilePage() {
           </div>
           <div className="flex-1 min-w-[140px]">
             <p className="font-serif text-xl text-sage leading-tight">{formData.name || 'Your Name'}</p>
-            {formData.business_name && <p className="text-sage/50 text-sm">{formData.business_name}</p>}
+            {formData.business_name && <p className="text-sage/50 text-sm mt-1">{formData.business_name}</p>}
             <p className="text-sage/40 text-xs">{formData.email}</p>
             {formData.niche && (
               <span className="inline-block mt-1.5 px-2.5 py-0.5 bg-dusty-rose/10 text-dusty-rose text-[11px] font-medium rounded-full">{formData.niche}</span>
@@ -428,7 +428,7 @@ export default function ProfilePage() {
                     <h3 className="font-serif text-2xl text-sage">Brand Anchor</h3>
                     <span className="px-2 py-0.5 bg-sage/10 text-sage text-[10px] font-semibold rounded-full uppercase tracking-wider">AI-generated</span>
                   </div>
-                  <p className="text-sage/50 text-sm">Your strategic brand positioning, synthesized from onboarding</p>
+                  <p className="text-sage/50 text-sm mt-1">Your strategic brand positioning, synthesized from onboarding</p>
                 </div>
                 <button onClick={handleRegenerate} disabled={isRegenerating} className="flex items-center gap-2 px-3 py-2 bg-sage/10 hover:bg-sage/20 text-sage text-xs font-medium rounded-xl transition-colors disabled:opacity-50 shrink-0">
                   {isRegenerating ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Refreshing…</> : <><RefreshCcw className="w-3.5 h-3.5" /> Refresh AI</>}

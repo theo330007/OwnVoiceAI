@@ -54,10 +54,10 @@ export default async function EditorialPage({
 
   return (
     <div className="min-h-screen bg-cream">
-      <div className="max-w-7xl mx-auto px-6 py-10">
+      <div className="px-8 py-8">
         <div className="mb-8">
-          <h1 className="font-serif text-4xl text-sage mb-2">Monthly Editorial Architecture</h1>
-          <p className="text-sage/60">
+          <h1 className="font-serif text-4xl text-sage">Monthly Editorial Architecture</h1>
+          <p className="text-sage/50 text-sm mt-1">
             Your 4-week content calendar — pillar rotation, content mix & posting cadence.
           </p>
         </div>

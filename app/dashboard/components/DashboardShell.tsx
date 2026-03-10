@@ -165,7 +165,7 @@ export function DashboardShell({
 
   return (
     <div className="min-h-screen bg-cream">
-      <div className="px-8 py-8 max-w-[1600px] mx-auto">
+      <div className="px-8 py-8">
         {/* Header */}
         <div className="mb-8">
           <p className="text-sage/50 text-sm mb-1">{dateStr}</p>
