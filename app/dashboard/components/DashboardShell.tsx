@@ -1,11 +1,13 @@
 'use client';
 
-import { Instagram, Video, FlaskConical, TrendingUp, FolderPlus, MessageSquare, ArrowRight, Sparkles, Lightbulb } from 'lucide-react';
-import { EditorialCalendar } from '@/app/editorial/components/EditorialCalendar';
-import { HotTopicsWidget, type UserNewsItem } from './HotTopicsWidget';
+import { Instagram, Video, FlaskConical, TrendingUp, FolderPlus, MessageSquare, ArrowRight, Sparkles, Lightbulb, CalendarDays, CheckCircle2 } from 'lucide-react';
+import { WeeklyCalendarStrip } from './WeeklyCalendarStrip';
+import { InstagramAnalyticsStrip } from './InstagramAnalyticsStrip';
 import { WelcomeBanner } from './WelcomeBanner';
+import { HotTopicBubble } from './HotTopicBubble';
 import Link from 'next/link';
 import type { Project } from '@/app/actions/projects';
+import type { InstagramInsight, InstagramPost } from '@/app/actions/instagram';
 
 interface TrendItem { id: string; title: string; description: string; }
 
@@ -13,7 +15,10 @@ interface Props {
   user: any;
   instagramConnected: boolean;
   instagramUsername: string | null;
-  userNews: UserNewsItem[];
+  instagramLastSynced: string | null;
+  instagramInsights: InstagramInsight[];
+  instagramTopPosts: InstagramPost[];
+  userNews: any[];
   isFirstVisit: boolean;
   pillars: { title: string; description: string }[];
   objectives: string[];
@@ -23,40 +28,34 @@ interface Props {
   recentTrends: TrendItem[];
 }
 
-function SocialStatusRow({
-  instagramConnected,
-  instagramUsername,
-}: {
-  instagramConnected: boolean;
-  instagramUsername: string | null;
-}) {
+// ─── Wizard step cards ────────────────────────────────────────────────────────
+
+function StructureCard() {
   return (
-    <div className="mt-4 grid grid-cols-2 gap-3">
-      <Link
-        href="/integrations/instagram"
-        className="flex items-center gap-3 bg-white border border-warm-border rounded-2xl px-4 py-3 hover:border-sage/30 transition-colors"
-      >
-        <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
-          <Instagram className="w-4 h-4 text-white" />
+    <div className="bg-white border border-warm-border rounded-3xl p-5 shadow-soft">
+      <div className="flex items-center gap-2.5 mb-3">
+        <div className="w-8 h-8 rounded-xl bg-dusty-rose/10 flex items-center justify-center flex-shrink-0">
+          <CalendarDays className="w-4 h-4 text-dusty-rose" />
         </div>
-        <div>
-          <p className="text-xs font-semibold text-sage">Instagram</p>
-          <p className="text-xs text-sage/50">
-            {instagramConnected ? `@${instagramUsername}` : 'Not connected'}
-          </p>
-        </div>
-      </Link>
-      <Link
-        href="/integrations"
-        className="flex items-center gap-3 bg-white border border-warm-border rounded-2xl px-4 py-3 hover:border-sage/30 transition-colors"
-      >
-        <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-black to-gray-700 flex items-center justify-center">
-          <Video className="w-4 h-4 text-white" />
-        </div>
-        <div>
-          <p className="text-xs font-semibold text-sage">TikTok</p>
-          <p className="text-xs text-sage/50">Not connected</p>
-        </div>
+        <h3 className="font-serif text-base text-sage">Structure</h3>
+      </div>
+      <p className="text-xs text-sage/60 mb-4 leading-relaxed">
+        It all starts here. Review your editorial calendar, check your content pillars, and know exactly where you stand.
+      </p>
+      <ul className="space-y-2 mb-4">
+        {[
+          { icon: CalendarDays,  text: 'Weekly editorial calendar' },
+          { icon: Sparkles,      text: 'Content pillars & strategy' },
+          { icon: CheckCircle2,  text: 'Plan & schedule posts' },
+        ].map(({ icon: Icon, text }) => (
+          <li key={text} className="flex items-center gap-2 text-xs text-sage/70">
+            <Icon className="w-3.5 h-3.5 text-sage/40 flex-shrink-0" />
+            {text}
+          </li>
+        ))}
+      </ul>
+      <Link href="/editorial" className="flex items-center justify-center gap-1.5 w-full py-2.5 bg-dusty-rose hover:bg-dusty-rose/90 text-cream text-sm font-medium rounded-2xl transition-colors">
+        View Calendar <ArrowRight className="w-3.5 h-3.5" />
       </Link>
     </div>
   );
@@ -71,11 +70,9 @@ function DiscoverCard() {
         </div>
         <h3 className="font-serif text-base text-sage">Discover</h3>
       </div>
-
       <p className="text-xs text-sage/60 mb-4 leading-relaxed">
         Explore macro trends, niche signals, and AI-generated content ideas tailored to your brand strategy.
       </p>
-
       <ul className="space-y-2 mb-4">
         {[
           { icon: TrendingUp,    text: 'Macro & niche trend radar' },
@@ -88,13 +85,8 @@ function DiscoverCard() {
           </li>
         ))}
       </ul>
-
-      <Link
-        href="/discover"
-        className="flex items-center justify-center gap-1.5 w-full py-2.5 bg-dusty-rose hover:bg-dusty-rose/90 text-cream text-sm font-medium rounded-2xl transition-colors"
-      >
-        Explore Ideas
-        <ArrowRight className="w-3.5 h-3.5" />
+      <Link href="/discover" className="flex items-center justify-center gap-1.5 w-full py-2.5 bg-dusty-rose hover:bg-dusty-rose/90 text-cream text-sm font-medium rounded-2xl transition-colors">
+        Explore Ideas <ArrowRight className="w-3.5 h-3.5" />
       </Link>
     </div>
   );
@@ -109,16 +101,14 @@ function LabCard() {
         </div>
         <h3 className="font-serif text-base text-sage">OwnVoice Lab</h3>
       </div>
-
       <p className="text-xs text-sage/60 mb-4 leading-relaxed">
         Your AI-powered content studio. Validate ideas, generate production-ready assets, and launch full content workflows — all grounded in your brand voice.
       </p>
-
       <ul className="space-y-2 mb-4">
         {[
           { icon: MessageSquare, text: 'Validate ideas with AI analysis' },
           { icon: TrendingUp,    text: 'Ground content in real trends' },
-          { icon: FolderPlus,   text: 'Turn ideas into full projects' },
+          { icon: FolderPlus,    text: 'Turn ideas into full projects' },
         ].map(({ icon: Icon, text }) => (
           <li key={text} className="flex items-center gap-2 text-xs text-sage/70">
             <Icon className="w-3.5 h-3.5 text-sage/40 flex-shrink-0" />
@@ -126,22 +116,22 @@ function LabCard() {
           </li>
         ))}
       </ul>
-
-      <Link
-        href="/lab"
-        className="flex items-center justify-center gap-1.5 w-full py-2.5 bg-dusty-rose hover:bg-dusty-rose/90 text-cream text-sm font-medium rounded-2xl transition-colors"
-      >
-        Open the Lab
-        <ArrowRight className="w-3.5 h-3.5" />
+      <Link href="/lab" className="flex items-center justify-center gap-1.5 w-full py-2.5 bg-dusty-rose hover:bg-dusty-rose/90 text-cream text-sm font-medium rounded-2xl transition-colors">
+        Open the Lab <ArrowRight className="w-3.5 h-3.5" />
       </Link>
     </div>
   );
 }
 
+// ─── Main shell ───────────────────────────────────────────────────────────────
+
 export function DashboardShell({
   user,
   instagramConnected,
   instagramUsername,
+  instagramLastSynced,
+  instagramInsights,
+  instagramTopPosts,
   userNews,
   isFirstVisit,
   pillars,
@@ -153,8 +143,7 @@ export function DashboardShell({
 }: Props) {
   const now = new Date();
   const hour = now.getHours();
-  const greeting =
-    hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
+  const greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
   const firstName = user?.name?.split(' ')[0] || 'Creator';
 
   const dateStr = now.toLocaleDateString('en-US', {
@@ -162,6 +151,12 @@ export function DashboardShell({
     month: 'long',
     day: 'numeric',
   });
+
+  const wizardSteps = [
+    { label: '01', card: <StructureCard /> },
+    { label: '02', card: <DiscoverCard /> },
+    { label: '03', card: <LabCard /> },
+  ];
 
   return (
     <div className="min-h-screen bg-cream">
@@ -179,29 +174,42 @@ export function DashboardShell({
 
         {/* Main 2-column layout */}
         <div className="flex gap-8">
-          {/* Left: Editorial Calendar (flex-1) */}
-          <div className="flex-1 min-w-0">
-            <EditorialCalendar
-              userId={user.id}
-              pillars={pillars}
-              objectives={objectives}
-              nicheContext={nicheContext}
+          {/* Left: Calendar + Instagram Analytics */}
+          <div className="flex-1 min-w-0 space-y-4">
+            <WeeklyCalendarStrip
               existingPlan={existingPlan}
+              nicheContext={nicheContext}
               projects={projects}
-              recentTrends={recentTrends}
-              hideControls
+            />
+            <InstagramAnalyticsStrip
+              instagramUsername={instagramUsername}
+              instagramLastSynced={instagramLastSynced}
+              followerCount={user?.instagram_follower_count ?? null}
+              insights={instagramInsights}
+              topPosts={instagramTopPosts}
             />
           </div>
 
-          {/* Right sidebar (320px) */}
-          <div className="w-80 flex-shrink-0 space-y-4">
-            <SocialStatusRow
-              instagramConnected={instagramConnected}
-              instagramUsername={instagramUsername}
-            />
-            <DiscoverCard />
-            <HotTopicsWidget initialUserNews={userNews} />
-            <LabCard />
+          {/* Right sidebar — vertical wizard */}
+          <div className="w-72 flex-shrink-0">
+            <HotTopicBubble />
+            {wizardSteps.map(({ label, card }, i) => (
+              <div key={label} className="flex gap-3">
+                {/* Step indicator + connecting thread */}
+                <div className="flex flex-col items-center pt-1">
+                  <div className="w-6 h-6 rounded-full border border-sage/20 bg-white flex items-center justify-center text-[10px] font-bold text-sage/50 flex-shrink-0 shadow-sm">
+                    {label}
+                  </div>
+                  {i < wizardSteps.length - 1 && (
+                    <div className="w-px flex-1 bg-sage/[0.12] mt-2" />
+                  )}
+                </div>
+                {/* Card */}
+                <div className="flex-1 min-w-0 pb-5">
+                  {card}
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </div>

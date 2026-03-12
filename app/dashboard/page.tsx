@@ -1,6 +1,7 @@
 import { requireAuth, getCurrentUser } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import { getUserProjects } from '@/app/actions/projects';
+import { getInstagramInsights, getTopInstagramPosts } from '@/app/actions/instagram';
 import { createClient } from '@/lib/supabase';
 import { DashboardShell } from './components/DashboardShell';
 
@@ -35,6 +36,17 @@ export default async function DashboardPage() {
   let projects: Awaited<ReturnType<typeof getUserProjects>> = [];
   try { projects = await getUserProjects(); } catch {}
 
+  let instagramInsights: Awaited<ReturnType<typeof getInstagramInsights>> = [];
+  let instagramTopPosts: Awaited<ReturnType<typeof getTopInstagramPosts>> = [];
+  if (user.instagram_username) {
+    try {
+      [instagramInsights, instagramTopPosts] = await Promise.all([
+        getInstagramInsights(user.id),
+        getTopInstagramPosts(user.id, 3),
+      ]);
+    } catch {}
+  }
+
   let recentTrends: { id: string; title: string; description: string }[] = [];
   try {
     const supabase = await createClient();
@@ -61,6 +73,9 @@ export default async function DashboardPage() {
       user={user}
       instagramConnected={!!user.instagram_username}
       instagramUsername={user.instagram_username ?? null}
+      instagramLastSynced={(user as any).instagram_last_synced_at ?? null}
+      instagramInsights={instagramInsights}
+      instagramTopPosts={instagramTopPosts}
       userNews={userNews}
       isFirstVisit={isFirstVisit}
       pillars={strategy.content_pillars || []}

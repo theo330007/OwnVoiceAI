@@ -3,7 +3,8 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase-browser';
-import { Instagram, Video, Youtube, CheckCircle2, XCircle, Loader2, Link2, ExternalLink } from 'lucide-react';
+import { Instagram, Video, Youtube, CheckCircle2, XCircle, Loader2, Link2, ExternalLink, BarChart2 } from 'lucide-react';
+import Link from 'next/link';
 
 interface Platform {
   id: string;
@@ -220,6 +221,13 @@ export default function IntegrationsPage() {
                             >
                               <ExternalLink className="w-4 h-4" />
                             </a>
+                            <Link
+                              href="/integrations/instagram"
+                              className="flex items-center gap-2 px-4 py-2 rounded-2xl border border-purple-200 text-purple-600 hover:bg-purple-50 text-sm font-medium transition-colors"
+                            >
+                              <BarChart2 className="w-3.5 h-3.5" />
+                              Analytics
+                            </Link>
                             <button
                               onClick={handleDisconnect}
                               disabled={isDisconnecting}
