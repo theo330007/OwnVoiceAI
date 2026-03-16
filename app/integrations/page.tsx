@@ -1,9 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase-browser';
-import { Instagram, Video, Youtube, CheckCircle2, XCircle, Loader2, Link2, ExternalLink, BarChart2 } from 'lucide-react';
+import { Instagram, Video, Youtube, CheckCircle2, XCircle, Loader2, ExternalLink, BarChart2, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
 
 interface Platform {
@@ -41,18 +41,32 @@ const PLATFORMS: Platform[] = [
   },
 ];
 
+const ERROR_MESSAGES: Record<string, string> = {
+  instagram_cancelled: 'Instagram connection was cancelled.',
+  no_facebook_page: 'No Facebook Page found. You need a Facebook Page linked to your Instagram Business/Creator account.',
+  no_instagram_business: 'No Instagram Business or Creator account found linked to your Facebook Page. Make sure your IG account is set to Business or Creator.',
+  oauth_failed: 'Something went wrong during Instagram connection. Please try again.',
+};
+
 export default function IntegrationsPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [user, setUser] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [instagramUsername, setInstagramUsername] = useState('');
-  const [inputValue, setInputValue] = useState('');
-  const [isSaving, setIsSaving] = useState(false);
   const [isDisconnecting, setIsDisconnecting] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   useEffect(() => {
     loadUser();
+    // Handle OAuth callback result
+    const connected = searchParams.get('connected');
+    const error = searchParams.get('error');
+    if (connected === 'true') {
+      setMessage({ type: 'success', text: 'Instagram connected successfully!' });
+    } else if (error) {
+      setMessage({ type: 'error', text: ERROR_MESSAGES[error] || 'Connection failed. Please try again.' });
+    }
   }, []);
 
   const loadUser = async () => {
@@ -71,32 +85,10 @@ export default function IntegrationsPage() {
 
       setUser(profile);
       setInstagramUsername(profile.instagram_username || '');
-      setInputValue(profile.instagram_username || '');
     } catch {
       router.push('/auth/login');
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  const handleConnect = async () => {
-    const username = inputValue.replace('@', '').trim();
-    if (!username) return;
-    setIsSaving(true);
-    setMessage(null);
-    try {
-      const supabase = createClient();
-      const { error } = await supabase
-        .from('users')
-        .update({ instagram_username: username })
-        .eq('id', user.id);
-      if (error) throw error;
-      setInstagramUsername(username);
-      setMessage({ type: 'success', text: `@${username} connected successfully!` });
-    } catch (err: any) {
-      setMessage({ type: 'error', text: err.message || 'Failed to connect Instagram' });
-    } finally {
-      setIsSaving(false);
     }
   };
 
@@ -107,11 +99,22 @@ export default function IntegrationsPage() {
       const supabase = createClient();
       const { error } = await supabase
         .from('users')
-        .update({ instagram_username: null })
+        .update({
+          instagram_username: null,
+          instagram_user_id: null,
+          instagram_access_token: null,
+          instagram_token_expires_at: null,
+          instagram_profile_picture_url: null,
+          instagram_bio: null,
+          instagram_follower_count: null,
+          instagram_following_count: null,
+          instagram_posts_count: null,
+          instagram_connected_at: null,
+          instagram_last_synced_at: null,
+        })
         .eq('id', user.id);
       if (error) throw error;
       setInstagramUsername('');
-      setInputValue('');
       setMessage({ type: 'success', text: 'Instagram disconnected.' });
     } catch (err: any) {
       setMessage({ type: 'error', text: err.message || 'Failed to disconnect' });
@@ -141,17 +144,16 @@ export default function IntegrationsPage() {
 
         {message && (
           <div
-            className={`rounded-2xl px-4 py-3 mb-6 ${
+            className={`flex items-start gap-3 rounded-2xl px-4 py-3 mb-6 ${
               message.type === 'success'
                 ? 'bg-green-50 border border-green-200'
                 : 'bg-red-50 border border-red-200'
             }`}
           >
-            <p
-              className={`text-sm ${
-                message.type === 'success' ? 'text-green-800' : 'text-red-800'
-              }`}
-            >
+            {message.type === 'error' && (
+              <AlertCircle className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />
+            )}
+            <p className={`text-sm ${message.type === 'success' ? 'text-green-800' : 'text-red-800'}`}>
               {message.text}
             </p>
           </div>
@@ -242,30 +244,17 @@ export default function IntegrationsPage() {
                             </button>
                           </div>
                         ) : (
-                          <div className="flex items-center gap-3">
-                            <div className="flex items-center gap-2 flex-1 border border-warm-border rounded-2xl px-4 py-2.5 focus-within:border-sage/40 transition-colors bg-white">
-                              <span className="text-sage/40 text-sm">@</span>
-                              <input
-                                type="text"
-                                value={inputValue.replace('@', '')}
-                                onChange={(e) => setInputValue(e.target.value)}
-                                onKeyDown={(e) => e.key === 'Enter' && handleConnect()}
-                                placeholder="your_instagram_handle"
-                                className="flex-1 bg-transparent text-sm text-sage placeholder:text-sage/30 focus:outline-none"
-                              />
-                            </div>
-                            <button
-                              onClick={handleConnect}
-                              disabled={isSaving || !inputValue.trim()}
-                              className="flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-gradient-to-r from-purple-500 to-pink-500 text-white text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-60"
+                          <div className="space-y-3">
+                            <a
+                              href="/api/auth/instagram"
+                              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-gradient-to-r from-purple-500 to-pink-500 text-white text-sm font-medium hover:opacity-90 transition-opacity"
                             >
-                              {isSaving ? (
-                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                              ) : (
-                                <Instagram className="w-3.5 h-3.5" />
-                              )}
-                              Connect
-                            </button>
+                              <Instagram className="w-3.5 h-3.5" />
+                              Connect with Instagram
+                            </a>
+                            <p className="text-xs text-sage/40">
+                              Requires an Instagram Business or Creator account linked to a Facebook Page.
+                            </p>
                           </div>
                         )}
                       </>

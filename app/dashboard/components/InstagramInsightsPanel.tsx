@@ -17,7 +17,6 @@ import {
   ChevronUp,
 } from 'lucide-react';
 import {
-  connectInstagramAccount,
   syncInstagramData,
   disconnectInstagramAccount,
   type InstagramInsight,
@@ -187,34 +186,13 @@ export function InstagramInsightsPanel({
   topPosts,
 }: Props) {
   const router = useRouter();
-  const [isConnecting, setIsConnecting] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
-  const [username, setUsername] = useState('');
-  const [showConnectForm, setShowConnectForm] = useState(false);
   const [expandedInsight, setExpandedInsight] = useState<string | null>(null);
   const [isCollapsed, setIsCollapsed] = useState(false);
 
   // Use mock data if real data is empty
   const displayInsights = insights.length > 0 ? insights : MOCK_INSIGHTS;
   const displayPosts = topPosts.length > 0 ? topPosts : MOCK_POSTS;
-
-  const handleConnect = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!username.trim()) return;
-
-    setIsConnecting(true);
-
-    try {
-      await connectInstagramAccount(username.trim());
-      setShowConnectForm(false);
-      setUsername('');
-      router.refresh();
-    } catch (error: any) {
-      alert(error.message || 'Failed to connect Instagram');
-    } finally {
-      setIsConnecting(false);
-    }
-  };
 
   const handleSync = async () => {
     setIsSyncing(true);
@@ -258,60 +236,21 @@ export function InstagramInsightsPanel({
           </div>
         </div>
 
-        {!showConnectForm ? (
-          <div className="text-center py-8">
-            <p className="text-sage/70 mb-6 max-w-2xl mx-auto">
-              Connect your Instagram account to get AI-powered insights about your content, discover what resonates with your audience, and find trending themes in your posts.
-            </p>
-            <Button
-              onClick={() => setShowConnectForm(true)}
-              className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white rounded-2xl px-8 py-3"
-            >
-              <Link2 className="w-5 h-5 mr-2" />
-              Connect Instagram Account
-            </Button>
-          </div>
-        ) : (
-          <form onSubmit={handleConnect} className="max-w-md mx-auto">
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-sage mb-2">
-                Instagram Username
-              </label>
-              <input
-                type="text"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                placeholder="yourusername"
-                className="w-full px-4 py-3 rounded-xl border border-sage/20 focus:border-purple-500 focus:outline-none"
-                required
-              />
-              <p className="text-xs text-sage/60 mt-2">
-                Enter your public Instagram username (without @)
-              </p>
-            </div>
-
-            <div className="flex gap-3">
-              <Button
-                type="submit"
-                disabled={isConnecting}
-                className="flex-1 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white rounded-xl"
-              >
-                {isConnecting ? 'Connecting...' : 'Connect'}
-              </Button>
-              <Button
-                type="button"
-                onClick={() => {
-                  setShowConnectForm(false);
-                  setUsername('');
-                }}
-                variant="outline"
-                className="rounded-xl border-2 border-sage/20 hover:border-sage text-sage"
-              >
-                Cancel
-              </Button>
-            </div>
-          </form>
-        )}
+        <div className="text-center py-8">
+          <p className="text-sage/70 mb-6 max-w-2xl mx-auto">
+            Connect your Instagram Business or Creator account to get AI-powered insights about your content, discover what resonates with your audience, and find trending themes in your posts.
+          </p>
+          <a
+            href="/api/auth/instagram"
+            className="inline-flex items-center gap-2 bg-gradient-to-r from-purple-500 to-pink-500 hover:opacity-90 text-white rounded-2xl px-8 py-3 font-medium transition-opacity"
+          >
+            <Instagram className="w-5 h-5" />
+            Connect with Instagram
+          </a>
+          <p className="text-xs text-sage/40 mt-3">
+            Requires an Instagram Business or Creator account linked to a Facebook Page.
+          </p>
+        </div>
       </Card>
     );
   }

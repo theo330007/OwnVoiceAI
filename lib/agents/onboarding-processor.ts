@@ -97,7 +97,6 @@ Return ONLY valid JSON with this exact structure:
   "positioning": "A 2-3 sentence positioning statement capturing their unique angle, the problem they solve, and why they're different.",
   "offering": "A 1-2 sentence summary of their core product/service and format.",
   "competitors": ["@handle1", "@handle2", "@handle3"],
-  "hot_news": "2-3 current trends or conversations relevant to their niche for content creation.",
   "target_audience": "A clear, concise description of their ideal client — demographics, psychographics, situation. 2-3 sentences.",
   "transformation": "The specific before→after transformation they promise their clients. 1-2 sentences.",
   "tone": "Their desired communication tone, refined. A short phrase.",
@@ -118,7 +117,6 @@ Return ONLY valid JSON with this exact structure:
 
 IMPORTANT:
 - For "competitors", extract Instagram handles from inspiration_accounts. If none provided, suggest 3 relevant accounts in their niche.
-- For "hot_news", infer trending topics based on their niche tags and current industry trends.
 - For "content_pillars", synthesize 3–5 HIGHLY SPECIFIC, tailored pillars from all answers. Be original and precise — e.g. "Hormonal Nutrition for Expats", "Gut Reset Protocols", "Nervous System Recovery". Do NOT use generic titles like "Wellness Tips", "Healthy Lifestyle", or "Mindset". If the user provided pillars, refine them to be more specific.
 - For "verbal_territory.tone": Synthesize the user's desired_tone, brand_words, and voice_keywords into one polished phrase.
 - For "verbal_territory.style": Derive from their content formats, persona, tone and origin story — 1 sentence.

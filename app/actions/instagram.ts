@@ -2,7 +2,7 @@
 
 import { createClient } from '@/lib/supabase';
 import { getCurrentUser } from '@/lib/auth';
-import { instagramScraper } from '@/lib/services/instagram-scraper.service';
+import { instagramGraph } from '@/lib/services/instagram-graph.service';
 import { revalidatePath } from 'next/cache';
 
 export interface InstagramInsight {
@@ -32,54 +32,7 @@ export interface InstagramPost {
 }
 
 /**
- * Connect Instagram account (manual username entry for scraping)
- */
-export async function connectInstagramAccount(username: string) {
-  const supabase = await createClient();
-  const user = await getCurrentUser();
-
-  if (!user) {
-    throw new Error('User not authenticated');
-  }
-
-  try {
-    // Always use mock profile data for development
-    const profile = await instagramScraper.scrapeProfile(username);
-
-    // Update user with Instagram data
-    const { error: updateError } = await supabase
-      .from('users')
-      .update({
-        instagram_username: username,
-        instagram_profile_picture_url: profile.profilePicUrl,
-        instagram_bio: profile.bio,
-        instagram_follower_count: profile.followerCount,
-        instagram_following_count: profile.followingCount,
-        instagram_posts_count: profile.postsCount,
-        instagram_connected_at: new Date().toISOString(),
-        instagram_last_synced_at: new Date().toISOString(),
-      })
-      .eq('id', user.id);
-
-    if (updateError) {
-      throw new Error(`Failed to update user: ${updateError.message}`);
-    }
-
-    // Start initial sync (with mock data)
-    await syncInstagramData(username);
-
-    revalidatePath('/dashboard');
-    revalidatePath('/profile');
-
-    return { success: true, profile };
-  } catch (error: any) {
-    console.error('Instagram connection failed:', error);
-    throw new Error(`Failed to connect Instagram: ${error.message}`);
-  }
-}
-
-/**
- * Sync Instagram data (posts + generate insights)
+ * Sync Instagram data (posts + generate insights) using the real Graph API
  */
 export async function syncInstagramData(username?: string) {
   const supabase = await createClient();
@@ -89,10 +42,19 @@ export async function syncInstagramData(username?: string) {
     throw new Error('User not authenticated');
   }
 
-  const instagramUsername = username || user.instagram_username;
+  // Get stored credentials
+  const { data: userData } = await supabase
+    .from('users')
+    .select('instagram_user_id, instagram_username, instagram_access_token, instagram_follower_count')
+    .eq('id', user.id)
+    .single();
 
-  if (!instagramUsername) {
-    throw new Error('No Instagram account connected');
+  const igUserId = userData?.instagram_user_id;
+  const accessToken = userData?.instagram_access_token;
+  const instagramUsername = userData?.instagram_username;
+
+  if (!igUserId || !accessToken) {
+    throw new Error('No Instagram account connected. Please reconnect via OAuth.');
   }
 
   // Create sync log
@@ -100,7 +62,7 @@ export async function syncInstagramData(username?: string) {
     .from('instagram_sync_log')
     .insert({
       user_id: user.id,
-      sync_type: username ? 'full' : 'incremental',
+      sync_type: 'full',
       status: 'started',
     })
     .select()
@@ -111,38 +73,31 @@ export async function syncInstagramData(username?: string) {
   }
 
   try {
-    // Scrape posts
-    const posts = await instagramScraper.scrapePosts(instagramUsername, 50);
+    // Fetch real posts from Graph API
+    const media = await instagramGraph.getMedia(igUserId, accessToken, 50);
 
-    console.log(`Scraped ${posts.length} posts for ${instagramUsername}`);
-
-    // Get current follower count for engagement rate calculation
-    const { data: userData } = await supabase
-      .from('users')
-      .select('instagram_follower_count')
-      .eq('id', user.id)
-      .single();
+    console.log(`Fetched ${media.length} posts for @${instagramUsername}`);
 
     const followerCount = userData?.instagram_follower_count || 1;
 
     // Save posts to database
     let postsInserted = 0;
 
-    for (const post of posts) {
-      const engagementRate = instagramScraper.calculateEngagementRate(
-        post.likeCount,
-        post.commentCount,
-        followerCount
-      );
+    for (const post of media) {
+      const likes = post.like_count || 0;
+      const comments = post.comments_count || 0;
+      const hashtags = instagramGraph.extractHashtags(post.caption);
+
+      const engagementRate = instagramGraph.calculateEngagementRate(likes, comments, followerCount);
 
       const postAge = Math.floor(
         (Date.now() - new Date(post.timestamp).getTime()) / (1000 * 60 * 60 * 24)
       );
 
-      const performanceScore = instagramScraper.calculatePerformanceScore(
+      const performanceScore = instagramGraph.calculatePerformanceScore(
         engagementRate,
-        post.likeCount,
-        post.commentCount,
+        likes,
+        comments,
         postAge
       );
 
@@ -152,17 +107,15 @@ export async function syncInstagramData(username?: string) {
           instagram_post_id: post.id,
           instagram_username: instagramUsername,
           caption: post.caption,
-          media_type: post.mediaType,
-          media_url: post.mediaUrl,
+          media_type: post.media_type,
+          media_url: post.media_url,
           permalink: post.permalink,
-          thumbnail_url: post.thumbnailUrl,
+          thumbnail_url: post.thumbnail_url,
           timestamp: post.timestamp,
-          like_count: post.likeCount,
-          comment_count: post.commentCount,
+          like_count: likes,
+          comment_count: comments,
           engagement_rate: engagementRate,
-          hashtags: post.hashtags,
-          mentions: post.mentions,
-          location: post.location,
+          hashtags,
           performance_score: performanceScore,
           scraped_at: new Date().toISOString(),
         },
@@ -552,6 +505,7 @@ export async function disconnectInstagramAccount() {
       instagram_username: null,
       instagram_user_id: null,
       instagram_access_token: null,
+      instagram_token_expires_at: null,
       instagram_profile_picture_url: null,
       instagram_bio: null,
       instagram_follower_count: null,
