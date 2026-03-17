@@ -24,6 +24,7 @@ export default async function DashboardPage() {
   const niche_funnel = (user.metadata as any)?.niche_funnel || {};
   const industries: string[] = (user.metadata as any)?.industries || [];
   const userNews = (user.metadata as any)?.user_news ?? [];
+  const quickPosts = (user.metadata as any)?.quick_posts ?? [];
 
   const nicheContext = niche_funnel?.microniche
     ? `${niche_funnel.category} > ${niche_funnel.subcategory} > ${niche_funnel.microniche}`
@@ -77,6 +78,7 @@ export default async function DashboardPage() {
       instagramInsights={instagramInsights}
       instagramTopPosts={instagramTopPosts}
       userNews={userNews}
+      quickPosts={quickPosts}
       isFirstVisit={isFirstVisit}
       pillars={strategy.content_pillars || []}
       objectives={strategy.post_objectives || []}

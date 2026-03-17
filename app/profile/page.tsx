@@ -9,6 +9,7 @@ import {
   Package, Users, Newspaper, Plus, X, Camera, Headphones, Upload, Eye,
   MessageSquare, Star, Layers, RefreshCcw, CalendarDays,
 } from 'lucide-react';
+import { HotTopicsWidget, type UserNewsItem } from '@/app/dashboard/components/HotTopicsWidget';
 
 // ── Niche taxonomy (Category → Sub-category → Micro-niche) ──────────────────
 const NICHE_TAXONOMY: Record<string, Record<string, string[]>> = {
@@ -105,6 +106,7 @@ export default function ProfilePage() {
   const [newFormat, setNewFormat] = useState('');
   const [newOfferType, setNewOfferType] = useState('');
 
+  const [userNews, setUserNews] = useState<UserNewsItem[]>([]);
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -166,6 +168,7 @@ export default function ProfilePage() {
       setCreatorFaceUrl(profile.creator_face_url || null);
       setCreatorVoiceUrl(profile.creator_voice_url || null);
       setFormData(buildFormData(profile));
+      setUserNews(profile.metadata?.user_news ?? []);
     } catch {
       router.push('/auth/login');
     } finally {
@@ -906,9 +909,7 @@ export default function ProfilePage() {
             </div>
 
             {/* My Hot Topics */}
-            <div className="bg-white rounded-3xl shadow-soft p-6">
-              <ReadableField label="My Hot Topics" icon={Newspaper} value={formData.hot_news} placeholder="Current topics and trends relevant to your audience..." rows={5} onChange={(v) => setFormData({ ...formData, hot_news: v })} />
-            </div>
+            <HotTopicsWidget initialUserNews={userNews} />
 
           </div>
         </div>

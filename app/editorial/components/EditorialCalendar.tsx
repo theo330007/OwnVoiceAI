@@ -55,12 +55,24 @@ interface EditorialPlan {
   routine?: DayRoutine[];
 }
 
+interface QuickPost {
+  id: string;
+  date: string;
+  day_name: string;
+  topic: string;
+  pillar: string;
+  contentType: 'Value' | 'Authority' | 'Sales';
+  objective: string;
+  format: string;
+}
+
 interface Props {
   userId: string;
   pillars: { title: string; description: string }[];
   objectives: string[];
   nicheContext: string;
   existingPlan: EditorialPlan | null;
+  quickPosts?: QuickPost[];
   projects: Project[];
   recentTrends: TrendItem[];
   hideControls?: boolean;
@@ -291,7 +303,7 @@ function ProjectPicker({
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
-export function EditorialCalendar({ userId, pillars, objectives, nicheContext, existingPlan, projects, recentTrends, hideControls = false, initialMonth, openSettings = false }: Props) {
+export function EditorialCalendar({ userId, pillars, objectives, nicheContext, existingPlan, quickPosts = [], projects, recentTrends, hideControls = false, initialMonth, openSettings = false }: Props) {
   const [cadence, setCadence] = useState(existingPlan?.cadence ?? 4);
   const [mix, setMix] = useState(existingPlan?.mix ?? { value: 50, authority: 30, sales: 20 });
   const [activeMixPreset, setActiveMixPreset] = useState<string | null>(
@@ -326,6 +338,22 @@ export function EditorialCalendar({ userId, pillars, objectives, nicheContext, e
   const datePostMap = plan
     ? buildDatePostMap(plan)
     : new Map<string, { post: PostSlot; weekIdx: number; postIdx: number }[]>();
+
+  // Merge quick posts (hot-topic additions) into the map
+  quickPosts.forEach((qp) => {
+    const slot: PostSlot = {
+      day: qp.day_name,
+      pillar: qp.pillar,
+      contentType: qp.contentType,
+      objective: qp.objective,
+      format: qp.format,
+      topic: qp.topic,
+      hook: '',
+      is_suggestion: true,
+    };
+    const existing = datePostMap.get(qp.date) ?? [];
+    datePostMap.set(qp.date, [...existing, { post: slot, weekIdx: -1, postIdx: -1 }]);
+  });
   const trendDateMap = plan
     ? mapTrendsToDateMap(recentTrends, plan)
     : new Map<string, TrendItem>();

@@ -28,8 +28,20 @@ interface EditorialPlan {
   weeks: WeekPlan[];
 }
 
+interface QuickPost {
+  id: string;
+  date: string;
+  day_name: string;
+  topic: string;
+  pillar: string;
+  contentType: 'Value' | 'Authority' | 'Sales';
+  objective: string;
+  format: string;
+}
+
 interface Props {
   existingPlan: EditorialPlan | null;
+  quickPosts: QuickPost[];
   nicheContext: string;
   projects: Project[];
 }
@@ -78,7 +90,7 @@ function buildDatePostMap(plan: EditorialPlan) {
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export function WeeklyCalendarStrip({ existingPlan, nicheContext, projects }: Props) {
+export function WeeklyCalendarStrip({ existingPlan, quickPosts, nicheContext, projects }: Props) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
@@ -103,6 +115,23 @@ export function WeeklyCalendarStrip({ existingPlan, nicheContext, projects }: Pr
   })();
 
   const datePostMap = existingPlan ? buildDatePostMap(existingPlan) : new Map<string, { post: PostSlot; weekIdx: number; postIdx: number }[]>();
+
+  // Merge quick posts (hot-topic additions) into the map
+  quickPosts.forEach((qp) => {
+    const slot: PostSlot = {
+      day: qp.day_name,
+      pillar: qp.pillar,
+      contentType: qp.contentType,
+      objective: qp.objective,
+      format: qp.format,
+      topic: qp.topic,
+      hook: '',
+      is_suggestion: true,
+    };
+    const existing = datePostMap.get(qp.date) ?? [];
+    datePostMap.set(qp.date, [...existing, { post: slot, weekIdx: -1, postIdx: -1 }]);
+  });
+
   const weekHasPosts = weekDays.some(day => (datePostMap.get(localDateStr(day)) ?? []).length > 0);
 
   const [modalPost, setModalPost] = useState<{
@@ -170,7 +199,8 @@ export function WeeklyCalendarStrip({ existingPlan, nicheContext, projects }: Pr
         </div>
 
         {weekHasPosts ? (
-          <div className="grid grid-cols-7 divide-x divide-sage/[0.08]">
+          <div className="overflow-x-auto">
+          <div className="flex divide-x divide-sage/[0.08] min-w-[700px]">
             {weekDays.map((day) => {
               const isToday = day.getTime() === today.getTime();
               const isPast  = day.getTime() < today.getTime();
@@ -178,47 +208,48 @@ export function WeeklyCalendarStrip({ existingPlan, nicheContext, projects }: Pr
               const entries = datePostMap.get(key) ?? [];
 
               return (
-                <div key={key} className={`flex flex-col${isPast ? ' opacity-40' : ''}`}>
+                <div key={key} className={`flex flex-col flex-1 min-w-0${isPast ? ' opacity-40' : ''}`}>
                   {/* Day header */}
-                  <div className={`px-1 py-2 text-center border-b border-sage/[0.08] ${isToday ? 'bg-sage' : 'bg-sage/[0.02]'}`}>
-                    <p className={`text-[10px] font-semibold uppercase tracking-wider ${isToday ? 'text-cream/70' : 'text-sage/40'}`}>
+                  <div className={`px-2 py-2.5 text-center border-b border-sage/[0.08] ${isToday ? 'bg-sage' : 'bg-sage/[0.02]'}`}>
+                    <p className={`text-[11px] font-semibold uppercase tracking-wider ${isToday ? 'text-cream/70' : 'text-sage/40'}`}>
                       {DAY_SHORT[day.getDay()]}
                     </p>
-                    <p className={`text-sm font-bold leading-none mt-0.5 ${isToday ? 'text-cream' : 'text-sage'}`}>
+                    <p className={`text-base font-bold leading-none mt-0.5 ${isToday ? 'text-cream' : 'text-sage'}`}>
                       {day.getDate()}
                     </p>
                   </div>
 
-                  {/* Post tiles — flex-1 so all columns match the tallest */}
-                  <div className="flex flex-col gap-1.5 p-2 flex-1">
+                  {/* Post tiles */}
+                  <div className="flex flex-col gap-2 p-2.5 flex-1">
                     {entries.length === 0 ? (
-                      <span className="text-[10px] text-sage/20 text-center block mt-4">—</span>
+                      <span className="text-xs text-sage/20 text-center block mt-4">—</span>
                     ) : (
-                      entries.slice(0, 4).map(({ post, weekIdx, postIdx }, pi) => {
+                      entries.slice(0, 3).map(({ post, weekIdx, postIdx }, pi) => {
                         const s = TYPE_STYLE[post.contentType] ?? TYPE_STYLE.Value;
                         return (
                           <button
                             key={pi}
                             onClick={() => setModalPost({ post, weekIdx, postIdx, dateStr: key })}
-                            className={`w-full text-left px-2.5 py-2 rounded-lg ${s.bg} ${s.text} hover:opacity-70 transition-opacity`}
+                            className={`w-full text-left px-3 py-2.5 rounded-xl ${s.bg} ${s.text} hover:opacity-70 transition-opacity`}
                           >
-                            <p className="text-[11px] font-medium leading-snug line-clamp-3 mb-1">
+                            <p className="text-xs font-semibold leading-snug line-clamp-3 mb-1.5">
                               {post.event_tag ? `${post.event_tag.split(' ')[0]} ` : ''}{post.topic}
                             </p>
-                            <p className="text-[9px] opacity-60 font-medium uppercase tracking-wide">
+                            <p className="text-[10px] opacity-60 font-medium uppercase tracking-wide">
                               {post.contentType} · {post.format}
                             </p>
                           </button>
                         );
                       })
                     )}
-                    {entries.length > 4 && (
-                      <span className="text-[10px] text-sage/30 pl-1">+{entries.length - 4} more</span>
+                    {entries.length > 3 && (
+                      <span className="text-[11px] text-sage/30 pl-1">+{entries.length - 3} more</span>
                     )}
                   </div>
                 </div>
               );
             })}
+          </div>
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center py-12 px-6">

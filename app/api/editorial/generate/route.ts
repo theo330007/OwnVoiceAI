@@ -49,6 +49,7 @@ export async function POST(request: Request) {
     const pillars: { title: string; description: string }[] = strategy.content_pillars || [];
     const objectives: string[] = strategy.post_objectives || [];
     const userNews: { title: string }[] = (user.metadata as any)?.user_news ?? [];
+    const hotTopic: string | undefined = (user.metadata as any)?.hot_topic;
     const days = CADENCE_DAYS[cadence];
     const now = new Date();
     const year = typeof targetYear === 'number' ? targetYear : now.getFullYear();
@@ -137,7 +138,9 @@ CRITICAL RULES:
 - objective field must be one of: Visibility, Connection, Conversion, Education & Authority
 - contentType must be one of: Value, Authority, Sales
 - format must be one of: Reel, Carousel, Story, Static Post, Live, Newsletter
-- Return ONLY raw JSON — no \`\`\`json fences, no preamble${routine?.length
+- Return ONLY raw JSON — no \`\`\`json fences, no preamble${hotTopic
+  ? `\n\nCURRENT HOT TOPIC (creator-submitted, highest priority — must feature in at least one post this month): "${hotTopic}"`
+  : ''}${routine?.length
   ? `\n\nDay Routine — apply this EVERY week, same pillar+vibe for each day:\n${(routine as { day: string; pillar: string; vibe: string }[]).map(r => `- ${r.day}: pillar="${r.pillar}", vibe="${r.vibe}"`).join('\n')}`
   : ''}${userNews.length
   ? `\n\nCreator's own hot topics — prioritise weaving these into the plan:\n${userNews.slice(0, 5).map(n => `- ${n.title}`).join('\n')}`

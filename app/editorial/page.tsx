@@ -23,6 +23,7 @@ export default async function EditorialPage({
     : industries.filter(Boolean).join(', ') || strategy.niche || 'wellness & personal development';
 
   const existingPlan = (user.metadata as any)?.editorial_plan || null;
+  const quickPosts = (user.metadata as any)?.quick_posts ?? [];
 
   let projects: Awaited<ReturnType<typeof getUserProjects>> = [];
   try {
@@ -67,6 +68,7 @@ export default async function EditorialPage({
           objectives={strategy.post_objectives || []}
           nicheContext={nicheContext}
           existingPlan={existingPlan}
+          quickPosts={quickPosts}
           projects={projects}
           recentTrends={recentTrends}
           initialMonth={initialMonth}

@@ -19,6 +19,7 @@ interface Props {
   instagramInsights: InstagramInsight[];
   instagramTopPosts: InstagramPost[];
   userNews: any[];
+  quickPosts: any[];
   isFirstVisit: boolean;
   pillars: { title: string; description: string }[];
   objectives: string[];
@@ -133,6 +134,7 @@ export function DashboardShell({
   instagramInsights,
   instagramTopPosts,
   userNews,
+  quickPosts,
   isFirstVisit,
   pillars,
   objectives,
@@ -160,7 +162,7 @@ export function DashboardShell({
 
   return (
     <div className="min-h-screen bg-cream">
-      <div className="px-8 py-8">
+      <div className="px-6 py-8">
         {/* Header */}
         <div className="mb-8">
           <p className="text-sage/50 text-sm mb-1">{dateStr}</p>
@@ -173,11 +175,12 @@ export function DashboardShell({
         <WelcomeBanner isFirstVisit={isFirstVisit} userName={firstName} />
 
         {/* Main 2-column layout */}
-        <div className="flex gap-8">
+        <div className="flex gap-5">
           {/* Left: Calendar + Instagram Analytics */}
           <div className="flex-1 min-w-0 space-y-4">
             <WeeklyCalendarStrip
               existingPlan={existingPlan}
+              quickPosts={quickPosts}
               nicheContext={nicheContext}
               projects={projects}
             />
@@ -191,7 +194,7 @@ export function DashboardShell({
           </div>
 
           {/* Right sidebar — vertical wizard */}
-          <div className="w-72 flex-shrink-0">
+          <div className="w-64 flex-shrink-0">
             <HotTopicBubble />
             {wizardSteps.map(({ label, card }, i) => (
               <div key={label} className="flex gap-3">

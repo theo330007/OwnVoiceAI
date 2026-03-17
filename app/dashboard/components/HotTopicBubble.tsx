@@ -8,17 +8,20 @@ export function HotTopicBubble() {
   const [topic, setTopic]       = useState('');
   const [saving, setSaving]     = useState(false);
   const [saved, setSaved]       = useState(false);
+  const [savedDay, setSavedDay] = useState<string>('tomorrow');
   const [dismissed, setDismissed] = useState(false);
+  const [error, setError]       = useState<string | null>(null);
 
   if (dismissed) return null;
 
   const handleSubmit = async () => {
     if (!topic.trim() || saving) return;
     setSaving(true);
+    setError(null);
     try {
       const supabase = createClient();
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!user) { setError('Not signed in'); return; }
 
       const { data: profile } = await supabase
         .from('users')
@@ -26,17 +29,46 @@ export function HotTopicBubble() {
         .eq('id', user.id)
         .single();
 
+      // Save hot_topic for priority editorial injection
       const updatedMetadata = {
         ...(profile?.metadata ?? {}),
         hot_topic: topic.trim(),
         hot_topic_set_at: new Date().toISOString(),
       };
 
-      await supabase.from('users').update({ metadata: updatedMetadata }).eq('id', user.id);
+      const { error: updateError } = await supabase
+        .from('users')
+        .update({ metadata: updatedMetadata })
+        .eq('id', user.id);
+
+      if (updateError) throw new Error(updateError.message);
+
+      // Append to user_news list (shown in dashboard widget & profile page)
+      const newsRes = await fetch('/api/dashboard/user-news', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: topic.trim() }),
+      });
+      if (!newsRes.ok) {
+        const data = await newsRes.json();
+        throw new Error(data.error || 'Failed to add to hot topics list');
+      }
+
+      // Add a quick post for tomorrow in the calendar
+      const calRes = await fetch('/api/dashboard/quick-post', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ topic: topic.trim() }),
+      });
+      if (calRes.ok) {
+        const calData = await calRes.json();
+        setSavedDay(calData.day_name ?? 'tomorrow');
+      }
+
       setSaved(true);
-      setTimeout(() => setDismissed(true), 2000);
-    } catch {
-      // silent fail
+      setTimeout(() => setDismissed(true), 4000);
+    } catch (err: any) {
+      setError(err.message || 'Failed to save');
     } finally {
       setSaving(false);
     }
@@ -52,9 +84,15 @@ export function HotTopicBubble() {
         <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-amber-300/60 to-transparent" />
 
         {saved ? (
-          <div className="flex items-center justify-center gap-2 py-3">
-            <Check className="w-4 h-4 text-green-500" />
-            <span className="text-sm font-medium text-sage">Hot topic saved!</span>
+          <div className="py-2 space-y-1.5">
+            <div className="flex items-center gap-2">
+              <Check className="w-4 h-4 text-green-500 flex-shrink-0" />
+              <span className="text-sm font-medium text-sage">Added to <strong>{savedDay}</strong>'s calendar — review it in Editorial</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Check className="w-4 h-4 text-green-500 flex-shrink-0" />
+              <span className="text-sm font-medium text-sage">Appended to Hot Topics in your Profile</span>
+            </div>
           </div>
         ) : (
           <>
@@ -93,6 +131,7 @@ export function HotTopicBubble() {
                 }
               </button>
             </div>
+            {error && <p className="text-[11px] text-red-500 mt-2">{error}</p>}
           </>
         )}
       </div>
