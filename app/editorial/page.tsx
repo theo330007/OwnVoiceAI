@@ -23,6 +23,7 @@ export default async function EditorialPage({
     : industries.filter(Boolean).join(', ') || strategy.niche || 'wellness & personal development';
 
   const existingPlan = (user.metadata as any)?.editorial_plan || null;
+  const editorialPrefs = (user.metadata as any)?.editorial_preferences || {};
   const quickPosts = (user.metadata as any)?.quick_posts ?? [];
 
   let projects: Awaited<ReturnType<typeof getUserProjects>> = [];
@@ -73,6 +74,9 @@ export default async function EditorialPage({
           recentTrends={recentTrends}
           initialMonth={initialMonth}
           openSettings={openSettings}
+          defaultCadence={editorialPrefs.cadence}
+          defaultMix={editorialPrefs.mix}
+          defaultMixPreset={editorialPrefs.mix_preset}
         />
       </div>
     </div>

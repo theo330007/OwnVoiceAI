@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
-import { LayoutDashboard, FolderOpen, Link2, Settings, LogOut, CalendarDays, Lightbulb, FlaskConical } from 'lucide-react';
+import { LayoutDashboard, FolderOpen, Settings, LogOut, CalendarDays, FlaskConical } from 'lucide-react';
 import { signOut } from '@/lib/auth';
 import { HelpChatWidget } from '@/components/HelpChatWidget';
 import { TopBar } from '@/components/layout/TopBar';
@@ -14,10 +14,8 @@ interface Props {
 const NAV_ITEMS = [
   { href: '/dashboard',   icon: LayoutDashboard, label: 'Dashboard' },
   { href: '/editorial',   icon: CalendarDays,    label: 'Editorial' },
-  { href: '/discover',    icon: Lightbulb,       label: 'Discover' },
   { href: '/projects',    icon: FolderOpen,      label: 'Projects' },
   { href: '/lab',         icon: FlaskConical,    label: 'OwnVoice Lab' },
-  { href: '/integrations', icon: Link2,          label: 'Integrations' },
   { href: '/profile',     icon: Settings,        label: 'Settings' },
 ];
 

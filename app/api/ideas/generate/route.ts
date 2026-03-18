@@ -1,8 +1,60 @@
 import { NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
+import { createClient } from '@/lib/supabase';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
+
+type FormatKey = 'carousel' | 'reel' | 'storytelling' | 'sales';
+type ContentType = 'Value' | 'Authority' | 'Sales';
+
+// ─── Date Utilities ───────────────────────────────────────────────────────────
+
+const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+// Posting days per cadence (0=Sun, 1=Mon, ...)
+const CADENCE_DAYS: Record<number, number[]> = {
+  3: [1, 3, 5],          // Mon, Wed, Fri
+  4: [1, 2, 4, 6],       // Mon, Tue, Thu, Sat
+  5: [1, 2, 3, 4, 5],    // Mon–Fri
+  7: [0, 1, 2, 3, 4, 5, 6],
+};
+
+function getNextPostingDates(count: number, cadence: number): { date: string; day_name: string }[] {
+  const postingDays = CADENCE_DAYS[cadence] || CADENCE_DAYS[4];
+  const result: { date: string; day_name: string }[] = [];
+  const d = new Date();
+  d.setDate(d.getDate() + 1); // start from tomorrow
+  d.setHours(0, 0, 0, 0);
+
+  while (result.length < count) {
+    if (postingDays.includes(d.getDay())) {
+      const y = d.getFullYear();
+      const mo = String(d.getMonth() + 1).padStart(2, '0');
+      const da = String(d.getDate()).padStart(2, '0');
+      result.push({ date: `${y}-${mo}-${da}`, day_name: DAY_NAMES[d.getDay()] });
+    }
+    d.setDate(d.getDate() + 1);
+  }
+  return result;
+}
+
+// Map format → content type
+const FORMAT_CONTENT_TYPE: Record<FormatKey, ContentType> = {
+  carousel:     'Value',
+  reel:         'Authority',
+  storytelling: 'Value',
+  sales:        'Sales',
+};
+
+const FORMAT_OBJECTIVE: Record<FormatKey, string> = {
+  carousel:     'Visibility',
+  reel:         'Authority',
+  storytelling: 'Connection',
+  sales:        'Conversion',
+};
+
+// ─── Route ────────────────────────────────────────────────────────────────────
 
 export async function POST(request: Request) {
   try {
@@ -20,6 +72,10 @@ export async function POST(request: Request) {
     const strategy = (user.metadata as any)?.strategy || {};
     const niche_funnel = (user.metadata as any)?.niche_funnel || {};
     const industries: string[] = (user.metadata as any)?.industries || [];
+    const editorialPrefs = (user.metadata as any)?.editorial_preferences || {};
+
+    // Editorial preferences
+    const cadence: number = editorialPrefs.cadence ?? 4;
 
     // Build niche context
     const nicheContext = niche_funnel?.microniche
@@ -123,11 +179,82 @@ QUALITY RULES:
     const ensure = (arr: any[], count: number) =>
       arr.length >= count ? arr.slice(0, count) : arr;
 
-    return NextResponse.json({
+    const grouped = {
       carousel:     ensure(parsed.carousel, 10),
       reel:         ensure(parsed.reel, 5),
       storytelling: ensure(parsed.storytelling, 3),
       sales:        ensure(parsed.sales, 3),
+    };
+
+    // ─── Assign calendar dates ─────────────────────────────────────────────────
+    // Interleave formats: 1 carousel, 1 reel, 1 storytelling, 1 sales, then surplus carousel
+    const pools: Record<FormatKey, any[]> = {
+      carousel:     [...grouped.carousel],
+      reel:         [...grouped.reel],
+      storytelling: [...grouped.storytelling],
+      sales:        [...grouped.sales],
+    };
+
+    const interleaved: { idea: any; format: FormatKey }[] = [];
+    const fmtOrder: FormatKey[] = ['carousel', 'reel', 'storytelling', 'sales'];
+
+    while (fmtOrder.some(f => pools[f].length > 0)) {
+      for (const fmt of fmtOrder) {
+        if (pools[fmt].length > 0) {
+          interleaved.push({ idea: pools[fmt].shift(), format: fmt });
+        }
+      }
+    }
+
+    const dates = getNextPostingDates(interleaved.length, cadence);
+
+    const scheduledInterleaved = interleaved.map((item, i) => ({
+      ...item.idea,
+      format: item.format,
+      contentType: FORMAT_CONTENT_TYPE[item.format],
+      scheduled_date: dates[i].date,
+      day_name: dates[i].day_name,
+    }));
+
+    // Re-group by format (with dates attached)
+    const withDates = {
+      carousel:     scheduledInterleaved.filter(i => i.format === 'carousel'),
+      reel:         scheduledInterleaved.filter(i => i.format === 'reel'),
+      storytelling: scheduledInterleaved.filter(i => i.format === 'storytelling'),
+      sales:        scheduledInterleaved.filter(i => i.format === 'sales'),
+    };
+
+    // ─── Save to quick_posts ──────────────────────────────────────────────────
+    const newQuickPosts = scheduledInterleaved.map(idea => ({
+      id: crypto.randomUUID(),
+      date: idea.scheduled_date,
+      day_name: idea.day_name,
+      topic: idea.concept.length > 100 ? idea.concept.slice(0, 97) + '…' : idea.concept,
+      pillar: pillar.title,
+      contentType: idea.contentType as ContentType,
+      objective: FORMAT_OBJECTIVE[idea.format as FormatKey],
+      format: idea.format.charAt(0).toUpperCase() + idea.format.slice(1),
+      hook: idea.hook,
+      source: 'discover',
+      created_at: new Date().toISOString(),
+    }));
+
+    const supabase = await createClient();
+    const existing: any[] = (user.metadata as any)?.quick_posts ?? [];
+    // Remove old discover ideas for this same pillar, keep all others
+    const kept = existing.filter((p: any) => !(p.source === 'discover' && p.pillar === pillar.title));
+    const updated = [...newQuickPosts, ...kept].slice(0, 200);
+
+    await supabase
+      .from('users')
+      .update({ metadata: { ...(user.metadata || {}), quick_posts: updated } })
+      .eq('id', user.id);
+
+    return NextResponse.json({
+      ...withDates,
+      total_scheduled: scheduledInterleaved.length,
+      first_date: dates[0]?.date,
+      last_date: dates[dates.length - 1]?.date,
     });
   } catch (error: any) {
     console.error('Ideas generate error:', error);

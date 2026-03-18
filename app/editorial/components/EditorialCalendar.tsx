@@ -78,6 +78,9 @@ interface Props {
   hideControls?: boolean;
   initialMonth?: { year: number; month: number };
   openSettings?: boolean;
+  defaultCadence?: number;
+  defaultMix?: { value: number; authority: number; sales: number };
+  defaultMixPreset?: string;
 }
 
 // ─── Constants ───────────────────────────────────────────────────────────────
@@ -303,13 +306,13 @@ function ProjectPicker({
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
-export function EditorialCalendar({ userId, pillars, objectives, nicheContext, existingPlan, quickPosts = [], projects, recentTrends, hideControls = false, initialMonth, openSettings = false }: Props) {
-  const [cadence, setCadence] = useState(existingPlan?.cadence ?? 4);
-  const [mix, setMix] = useState(existingPlan?.mix ?? { value: 50, authority: 30, sales: 20 });
+export function EditorialCalendar({ userId, pillars, objectives, nicheContext, existingPlan, quickPosts = [], projects, recentTrends, hideControls = false, initialMonth, openSettings = false, defaultCadence, defaultMix, defaultMixPreset }: Props) {
+  const [cadence, setCadence] = useState(existingPlan?.cadence ?? defaultCadence ?? 4);
+  const [mix, setMix] = useState(existingPlan?.mix ?? defaultMix ?? { value: 50, authority: 30, sales: 20 });
   const [activeMixPreset, setActiveMixPreset] = useState<string | null>(
     existingPlan
       ? (MIX_PRESETS.find(p => JSON.stringify(p.value) === JSON.stringify(existingPlan.mix))?.label ?? null)
-      : 'Balanced'
+      : (defaultMixPreset ?? 'Balanced')
   );
   const [plan, setPlan] = useState<EditorialPlan | null>(existingPlan);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -322,7 +325,7 @@ export function EditorialCalendar({ userId, pillars, objectives, nicheContext, e
     const d = existingPlan?.start_date ? parseLocalDate(existingPlan.start_date) : new Date();
     return { year: d.getFullYear(), month: d.getMonth() };
   });
-  const [showControls, setShowControls] = useState(openSettings || !existingPlan);
+  const showControls = false; // Settings moved to profile → Content DNA tab
   const [modalPost, setModalPost] = useState<{
     post: PostSlot; weekIdx: number; postIdx: number; dateStr: string;
   } | null>(null);
@@ -378,7 +381,6 @@ export function EditorialCalendar({ userId, pillars, objectives, nicheContext, e
       if (!res.ok) throw new Error(data.error || 'Failed to generate plan');
       setPlan(data.plan);
       setModalPost(null);
-      setShowControls(false);
       setViewMode('monthly');
       if (data.plan.start_date) {
         const d = parseLocalDate(data.plan.start_date);
@@ -597,150 +599,26 @@ export function EditorialCalendar({ userId, pillars, objectives, nicheContext, e
 
   return (
     <div className="space-y-4">
-      {/* Compact top bar */}
-      <div className="flex flex-wrap items-center gap-3">
-        {/* Title — dashboard mode only */}
-        {hideControls && (
-          <h2 className="font-serif text-lg text-sage">My Content Calendar</h2>
-        )}
-
-        {/* View toggle — hidden in dashboard mode */}
-        {!hideControls && (
-          <div className="flex gap-1 p-1 bg-white border border-warm-border rounded-xl shadow-soft">
-            {(['monthly', 'routine'] as const).map(mode => (
-              <button
-                key={mode}
-                onClick={() => setViewMode(mode)}
-                className={`px-3.5 py-1.5 rounded-lg text-xs font-medium capitalize transition-all ${
-                  viewMode === mode ? 'bg-sage text-cream shadow-sm' : 'text-sage/50 hover:text-sage'
-                }`}
-              >
-                {mode}
-              </button>
-            ))}
-          </div>
-        )}
-
-        {/* Current settings summary — editorial page only */}
-        {!hideControls && plan && !showControls && (
-          <div className="flex items-center gap-2">
-            <span className="px-2.5 py-1.5 bg-white border border-warm-border rounded-xl text-xs text-sage/60 shadow-soft">
-              {cadence}×/week
-            </span>
-            <span className="px-2.5 py-1.5 bg-white border border-warm-border rounded-xl text-xs text-sage/60 shadow-soft">
-              {mix.value}% V · {mix.authority}% A · {mix.sales}% S
-            </span>
-          </div>
-        )}
-
-        {!hideControls && (
-          <button
-            onClick={() => setShowControls(v => !v)}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-warm-border rounded-xl text-xs text-sage/50 hover:text-sage hover:border-sage/30 transition-colors shadow-soft"
-          >
-            <Settings2 className="w-3.5 h-3.5" />
-            {showControls ? 'Hide settings' : 'Settings'}
-          </button>
-        )}
-
-        {isSaving && (
-          <span className="flex items-center gap-1.5 text-[11px] text-sage/40">
-            <Loader2 className="w-3 h-3 animate-spin" /> Saving…
-          </span>
-        )}
-
-        <div className="ml-auto flex items-center gap-2">
-          {!hideControls && error && <p className="text-xs text-red-500">{error}</p>}
-          {hideControls ? (
-            <Link
-              href="/editorial"
-              className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-sage to-sage/80 hover:from-sage/90 hover:to-sage/70 text-cream text-xs font-semibold rounded-xl transition-all shadow-sm"
-              title="Adjust cadence, content mix and regenerate your plan on the Editorial page"
-            >
-              <Settings2 className="w-3.5 h-3.5" />
-              Configure &amp; Generate
-            </Link>
-          ) : (
-            <button
-              onClick={handleGenerate}
-              disabled={isGenerating}
-              className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-sage to-sage/80 hover:from-sage/90 hover:to-sage/70 text-cream text-xs font-medium rounded-xl transition-all disabled:opacity-60 shadow-sm"
-            >
-              {isGenerating ? (
-                <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Generating…</>
-              ) : plan ? (
-                <><RefreshCcw className="w-3.5 h-3.5" /> Generate</>
-              ) : (
-                <><Sparkles className="w-3.5 h-3.5" /> Generate My Month</>
-              )}
-            </button>
-          )}
+      {/* Saving indicator */}
+      {isSaving && (
+        <div className="flex items-center gap-1.5 text-[11px] text-sage/40">
+          <Loader2 className="w-3 h-3 animate-spin" /> Saving…
         </div>
-      </div>
+      )}
 
-      {/* Expanded settings panel */}
-      {showControls && !hideControls && (
-        <div className="bg-white border border-warm-border rounded-3xl p-5 shadow-soft">
-          {noPillars && (
-            <div className="mb-4 p-3 bg-amber-50 border border-amber-100 rounded-2xl">
-              <p className="text-sm text-amber-700">
-                No content pillars found. Complete your{' '}
-                <a href="/onboarding" className="underline font-medium">onboarding</a> or set pillars in{' '}
-                <a href="/profile" className="underline font-medium">Settings</a> first.
-              </p>
-            </div>
-          )}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            <div>
-              <p className="text-xs font-semibold text-sage/50 uppercase tracking-wider mb-2">Posting Cadence</p>
-              <div className="flex flex-wrap gap-2">
-                {CADENCE_OPTIONS.map(opt => (
-                  <button
-                    key={opt.value}
-                    onClick={() => { setCadence(opt.value); setRoutine(suggestRoutine(pillars, CADENCE_DAYS[opt.value] ?? [])); }}
-                    className={`px-3.5 py-1.5 rounded-xl text-sm font-medium border transition-all ${
-                      cadence === opt.value
-                        ? 'bg-sage text-cream border-sage shadow-sm'
-                        : 'bg-transparent text-sage/60 border-sage/20 hover:border-sage/40 hover:text-sage'
-                    }`}
-                  >
-                    {opt.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div>
-              <p className="text-xs font-semibold text-sage/50 uppercase tracking-wider mb-2">Content Mix</p>
-              <div className="flex flex-wrap gap-2">
-                {MIX_PRESETS.map(preset => (
-                  <button
-                    key={preset.label}
-                    onClick={() => handleMixPreset(preset)}
-                    title={`${preset.value.value}% Value · ${preset.value.authority}% Authority · ${preset.value.sales}% Sales`}
-                    className={`px-3.5 py-1.5 rounded-xl text-sm font-medium border transition-all ${
-                      activeMixPreset === preset.label
-                        ? 'bg-dusty-rose text-white border-dusty-rose shadow-sm'
-                        : 'bg-transparent text-sage/60 border-sage/20 hover:border-sage/40 hover:text-sage'
-                    }`}
-                  >
-                    {preset.label}
-                    <span className="ml-1.5 text-[10px] opacity-70">{preset.description}</span>
-                  </button>
-                ))}
-              </div>
-              <div className="mt-3 flex rounded-full overflow-hidden h-1.5">
-                <div className="bg-sage transition-all duration-300" style={{ width: `${mix.value}%` }} />
-                <div className="bg-blue-400 transition-all duration-300" style={{ width: `${mix.authority}%` }} />
-                <div className="bg-dusty-rose transition-all duration-300" style={{ width: `${mix.sales}%` }} />
-              </div>
-              <div className="mt-1.5 flex gap-3 text-[10px] text-sage/50">
-                <span><span className="inline-block w-1.5 h-1.5 bg-sage rounded-full mr-1 align-middle" />{mix.value}% Value</span>
-                <span><span className="inline-block w-1.5 h-1.5 bg-blue-400 rounded-full mr-1 align-middle" />{mix.authority}% Authority</span>
-                <span><span className="inline-block w-1.5 h-1.5 bg-dusty-rose rounded-full mr-1 align-middle" />{mix.sales}% Sales</span>
-              </div>
-            </div>
+      {/* CTA — redirect to Discover to generate ideas */}
+      {!hideControls && !plan && (
+        <div className="p-5 bg-white border border-warm-border rounded-3xl shadow-soft flex items-center justify-between gap-4">
+          <div>
+            <p className="text-sm font-medium text-sage">No plan generated yet</p>
+            <p className="text-xs text-sage/50 mt-0.5">Head to Discover to explore trends and generate content ideas for your calendar.</p>
           </div>
+          <Link
+            href="/dashboard"
+            className="flex-shrink-0 flex items-center gap-2 px-4 py-2 bg-dusty-rose hover:bg-dusty-rose/90 text-white text-sm font-medium rounded-xl transition-colors"
+          >
+            <Sparkles className="w-4 h-4" /> Go to Discover
+          </Link>
         </div>
       )}
 
@@ -997,24 +875,12 @@ export function EditorialCalendar({ userId, pillars, objectives, nicheContext, e
               <p className="text-sage/50 text-sm mb-3">
                 No posts scheduled for {MONTH_NAMES[viewMonth.month]} {viewMonth.year}.
               </p>
-              {hideControls ? (
-                <Link
-                  href={`/editorial?month=${viewMonth.year}-${String(viewMonth.month + 1).padStart(2, '0')}&openSettings=1`}
-                  className="inline-flex items-center gap-2 px-5 py-2.5 bg-sage hover:bg-sage/90 text-cream text-sm font-medium rounded-xl transition-colors"
-                >
-                  <Settings2 className="w-4 h-4" />
-                  Configure &amp; generate for {MONTH_NAMES[viewMonth.month]}
-                </Link>
-              ) : (
-                <button
-                  onClick={handleGenerate}
-                  disabled={isGenerating}
-                  className="inline-flex items-center gap-2 px-5 py-2.5 bg-sage hover:bg-sage/90 text-cream text-sm font-medium rounded-xl transition-colors disabled:opacity-60"
-                >
-                  <Sparkles className="w-4 h-4" />
-                  Extend plan to cover this month
-                </button>
-              )}
+              <Link
+                href="/dashboard"
+                className="inline-flex items-center gap-2 px-5 py-2.5 bg-dusty-rose hover:bg-dusty-rose/90 text-white text-sm font-medium rounded-xl transition-colors"
+              >
+                <Sparkles className="w-4 h-4" /> Go to Discover
+              </Link>
             </div>
           )}
 

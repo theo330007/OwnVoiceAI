@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import {
   Sparkles, Loader2, RefreshCcw, Lightbulb, LayoutGrid, Video,
-  BookHeart, ShoppingBag, CheckCircle2, FolderPlus, ExternalLink,
+  BookHeart, ShoppingBag, CheckCircle2, FolderPlus, ExternalLink, CalendarCheck,
 } from 'lucide-react';
 import Link from 'next/link';
 import { createProjectFromIdea } from '@/app/actions/projects';
@@ -15,6 +15,9 @@ interface IdeaItem {
   concept: string;
   cta: string;
   source_type: string;
+  scheduled_date?: string;
+  day_name?: string;
+  contentType?: 'Value' | 'Authority' | 'Sales';
 }
 
 interface IdeaSet {
@@ -25,6 +28,9 @@ interface IdeaSet {
   pillar: string;
   angle: string;
   sources: string[];
+  total_scheduled?: number;
+  first_date?: string;
+  last_date?: string;
 }
 
 type FormatKey = 'carousel' | 'reel' | 'storytelling' | 'sales';
@@ -62,6 +68,11 @@ const SOURCE_COLORS: Record<string, string> = {
 };
 
 // ─── Idea Card ────────────────────────────────────────────────────────────────
+
+function formatScheduledDate(date: string): string {
+  const d = new Date(date + 'T00:00:00');
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
 
 function IdeaCard({
   idea,
@@ -105,6 +116,12 @@ function IdeaCard({
         {angle !== 'standard' && angleOpt?.badgeBg && (
           <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${angleOpt.badgeBg} ${angleOpt.badgeText}`}>
             {angleOpt.label}
+          </span>
+        )}
+        {idea.scheduled_date && (
+          <span className="ml-auto flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-sage/8 text-sage/60">
+            <CalendarCheck className="w-3 h-3" />
+            {idea.day_name?.slice(0, 3)} · {formatScheduledDate(idea.scheduled_date)}
           </span>
         )}
       </div>
@@ -165,6 +182,7 @@ export function IdeasPanel({ userId, pillars, strategy }: Props) {
   const [activeFormat, setActiveFormat] = useState<FormatKey>('carousel');
   const [sourceFilter, setSourceFilter] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [calendarBanner, setCalendarBanner] = useState<{ count: number; first: string; last: string } | null>(null);
 
   useEffect(() => {
     try { sessionStorage.setItem('ov_ideas', JSON.stringify(ideas)); } catch {}
@@ -194,6 +212,9 @@ export function IdeasPanel({ userId, pillars, strategy }: Props) {
       if (!res.ok) throw new Error(data.error || 'Failed to generate ideas');
       setIdeas(prev => ({ ...prev, [activePillar]: { ...data, pillar: activePillar, angle, sources } }));
       setActiveFormat('carousel');
+      if (data.total_scheduled && data.first_date && data.last_date) {
+        setCalendarBanner({ count: data.total_scheduled, first: data.first_date, last: data.last_date });
+      }
     } catch (err: any) {
       setError(err.message || 'Failed to generate ideas');
     } finally {
@@ -335,28 +356,55 @@ export function IdeasPanel({ userId, pillars, strategy }: Props) {
         )}
       </div>
 
+      {/* Calendar banner */}
+      {calendarBanner && (
+        <div className="flex items-center gap-3 px-4 py-3 bg-sage/8 border border-sage/15 rounded-2xl">
+          <CalendarCheck className="w-4 h-4 text-sage shrink-0" />
+          <p className="text-xs text-sage flex-1">
+            <span className="font-semibold">{calendarBanner.count} ideas</span> added to your editorial calendar
+            {' '}from <span className="font-semibold">{formatScheduledDate(calendarBanner.first)}</span> to{' '}
+            <span className="font-semibold">{formatScheduledDate(calendarBanner.last)}</span>.
+          </p>
+          <Link
+            href="/editorial"
+            className="shrink-0 text-[11px] font-semibold text-dusty-rose hover:text-dusty-rose/80 transition-colors underline"
+          >
+            View calendar →
+          </Link>
+          <button
+            onClick={() => setCalendarBanner(null)}
+            className="shrink-0 text-sage/30 hover:text-sage/60 transition-colors text-xs"
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
       {/* D — Results */}
       {currentIdeas && (
         <div>
           {/* Format tabs */}
           <div className="flex gap-1 p-1 bg-sage/5 rounded-2xl mb-3">
-            {FORMATS.map(({ key, label, count, icon: Icon }) => (
-              <button
-                key={key}
-                onClick={() => { setActiveFormat(key); setSourceFilter(null); }}
-                className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-semibold transition-all ${
-                  activeFormat === key
-                    ? 'bg-white text-sage shadow-sm'
-                    : 'text-sage/40 hover:text-sage/70'
-                }`}
-              >
-                <Icon className="w-3 h-3" />
-                {label}
-                <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${
-                  activeFormat === key ? 'bg-sage/10 text-sage' : 'bg-sage/5 text-sage/40'
-                }`}>{count}</span>
-              </button>
-            ))}
+            {FORMATS.map(({ key, label, icon: Icon }) => {
+              const actualCount = currentIdeas[key]?.length ?? 0;
+              return (
+                <button
+                  key={key}
+                  onClick={() => { setActiveFormat(key); setSourceFilter(null); }}
+                  className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-semibold transition-all ${
+                    activeFormat === key
+                      ? 'bg-white text-sage shadow-sm'
+                      : 'text-sage/40 hover:text-sage/70'
+                  }`}
+                >
+                  <Icon className="w-3 h-3" />
+                  {label}
+                  <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${
+                    activeFormat === key ? 'bg-sage/10 text-sage' : 'bg-sage/5 text-sage/40'
+                  }`}>{actualCount}</span>
+                </button>
+              );
+            })}
           </div>
 
           {/* Source filter chips */}

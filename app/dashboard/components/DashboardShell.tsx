@@ -1,32 +1,25 @@
 'use client';
 
-import { Instagram, Video, FlaskConical, TrendingUp, FolderPlus, MessageSquare, ArrowRight, Sparkles, Lightbulb, CalendarDays, CheckCircle2 } from 'lucide-react';
-import { WeeklyCalendarStrip } from './WeeklyCalendarStrip';
-import { InstagramAnalyticsStrip } from './InstagramAnalyticsStrip';
+import { FlaskConical, TrendingUp, FolderPlus, MessageSquare, ArrowRight, Sparkles, CalendarDays, CheckCircle2 } from 'lucide-react';
+import { DiscoveryPanel } from './DiscoveryPanel';
 import { WelcomeBanner } from './WelcomeBanner';
 import { HotTopicBubble } from './HotTopicBubble';
 import Link from 'next/link';
 import type { Project } from '@/app/actions/projects';
-import type { InstagramInsight, InstagramPost } from '@/app/actions/instagram';
-
-interface TrendItem { id: string; title: string; description: string; }
+import type { Trend } from '@/lib/types';
 
 interface Props {
   user: any;
-  instagramConnected: boolean;
-  instagramUsername: string | null;
-  instagramLastSynced: string | null;
-  instagramInsights: InstagramInsight[];
-  instagramTopPosts: InstagramPost[];
   userNews: any[];
-  quickPosts: any[];
   isFirstVisit: boolean;
   pillars: { title: string; description: string }[];
-  objectives: string[];
   nicheContext: string;
-  existingPlan: any;
   projects: Project[];
-  recentTrends: TrendItem[];
+  macroTrends: Trend[];
+  nicheTrends: Trend[];
+  strategicInsights: any[];
+  userIndustries: string[];
+  strategy: Record<string, any>;
 }
 
 // ─── Wizard step cards ────────────────────────────────────────────────────────
@@ -41,13 +34,13 @@ function StructureCard() {
         <h3 className="font-serif text-base text-sage">Structure</h3>
       </div>
       <p className="text-xs text-sage/60 mb-4 leading-relaxed">
-        It all starts here. Review your editorial calendar, check your content pillars, and know exactly where you stand.
+        Review your editorial calendar, check your content pillars, and know exactly where you stand.
       </p>
       <ul className="space-y-2 mb-4">
         {[
-          { icon: CalendarDays,  text: 'Weekly editorial calendar' },
-          { icon: Sparkles,      text: 'Content pillars & strategy' },
-          { icon: CheckCircle2,  text: 'Plan & schedule posts' },
+          { icon: CalendarDays, text: 'Weekly editorial calendar' },
+          { icon: Sparkles,     text: 'Content pillars & strategy' },
+          { icon: CheckCircle2, text: 'Plan & schedule posts' },
         ].map(({ icon: Icon, text }) => (
           <li key={text} className="flex items-center gap-2 text-xs text-sage/70">
             <Icon className="w-3.5 h-3.5 text-sage/40 flex-shrink-0" />
@@ -57,37 +50,6 @@ function StructureCard() {
       </ul>
       <Link href="/editorial" className="flex items-center justify-center gap-1.5 w-full py-2.5 bg-dusty-rose hover:bg-dusty-rose/90 text-cream text-sm font-medium rounded-2xl transition-colors">
         View Calendar <ArrowRight className="w-3.5 h-3.5" />
-      </Link>
-    </div>
-  );
-}
-
-function DiscoverCard() {
-  return (
-    <div className="bg-white border border-warm-border rounded-3xl p-5 shadow-soft">
-      <div className="flex items-center gap-2.5 mb-3">
-        <div className="w-8 h-8 rounded-xl bg-dusty-rose/10 flex items-center justify-center flex-shrink-0">
-          <Lightbulb className="w-4 h-4 text-dusty-rose" />
-        </div>
-        <h3 className="font-serif text-base text-sage">Discover</h3>
-      </div>
-      <p className="text-xs text-sage/60 mb-4 leading-relaxed">
-        Explore macro trends, niche signals, and AI-generated content ideas tailored to your brand strategy.
-      </p>
-      <ul className="space-y-2 mb-4">
-        {[
-          { icon: TrendingUp,    text: 'Macro & niche trend radar' },
-          { icon: Sparkles,      text: 'AI idea generation' },
-          { icon: MessageSquare, text: 'Strategic content angles' },
-        ].map(({ icon: Icon, text }) => (
-          <li key={text} className="flex items-center gap-2 text-xs text-sage/70">
-            <Icon className="w-3.5 h-3.5 text-sage/40 flex-shrink-0" />
-            {text}
-          </li>
-        ))}
-      </ul>
-      <Link href="/discover" className="flex items-center justify-center gap-1.5 w-full py-2.5 bg-dusty-rose hover:bg-dusty-rose/90 text-cream text-sm font-medium rounded-2xl transition-colors">
-        Explore Ideas <ArrowRight className="w-3.5 h-3.5" />
       </Link>
     </div>
   );
@@ -103,7 +65,7 @@ function LabCard() {
         <h3 className="font-serif text-base text-sage">OwnVoice Lab</h3>
       </div>
       <p className="text-xs text-sage/60 mb-4 leading-relaxed">
-        Your AI-powered content studio. Validate ideas, generate production-ready assets, and launch full content workflows — all grounded in your brand voice.
+        Validate ideas, generate production-ready assets, and launch full content workflows grounded in your brand voice.
       </p>
       <ul className="space-y-2 mb-4">
         {[
@@ -128,20 +90,12 @@ function LabCard() {
 
 export function DashboardShell({
   user,
-  instagramConnected,
-  instagramUsername,
-  instagramLastSynced,
-  instagramInsights,
-  instagramTopPosts,
-  userNews,
-  quickPosts,
   isFirstVisit,
-  pillars,
-  objectives,
-  nicheContext,
-  existingPlan,
-  projects,
-  recentTrends,
+  macroTrends,
+  nicheTrends,
+  strategicInsights,
+  userIndustries,
+  strategy,
 }: Props) {
   const now = new Date();
   const hour = now.getHours();
@@ -156,12 +110,11 @@ export function DashboardShell({
 
   const wizardSteps = [
     { label: '01', card: <StructureCard /> },
-    { label: '02', card: <DiscoverCard /> },
-    { label: '03', card: <LabCard /> },
+    { label: '02', card: <LabCard /> },
   ];
 
   return (
-    <div className="min-h-screen bg-cream">
+    <div className="min-h-screen bg-cream overflow-x-hidden">
       <div className="px-6 py-8">
         {/* Header */}
         <div className="mb-8">
@@ -176,29 +129,24 @@ export function DashboardShell({
 
         {/* Main 2-column layout */}
         <div className="flex gap-5">
-          {/* Left: Calendar + Instagram Analytics */}
-          <div className="flex-1 min-w-0 space-y-4">
-            <WeeklyCalendarStrip
-              existingPlan={existingPlan}
-              quickPosts={quickPosts}
-              nicheContext={nicheContext}
-              projects={projects}
-            />
-            <InstagramAnalyticsStrip
-              instagramUsername={instagramUsername}
-              instagramLastSynced={instagramLastSynced}
-              followerCount={user?.instagram_follower_count ?? null}
-              insights={instagramInsights}
-              topPosts={instagramTopPosts}
+          {/* Left: Discover / trends panel */}
+          <div className="flex-1 min-w-0">
+            <DiscoveryPanel
+              macroTrends={macroTrends}
+              nicheTrends={nicheTrends}
+              userId={user.id}
+              userIndustries={userIndustries}
+              strategicInsights={strategicInsights}
+              pillars={strategy.content_pillars || []}
+              strategy={strategy}
             />
           </div>
 
-          {/* Right sidebar — vertical wizard */}
+          {/* Right sidebar */}
           <div className="w-64 flex-shrink-0">
             <HotTopicBubble />
             {wizardSteps.map(({ label, card }, i) => (
               <div key={label} className="flex gap-3">
-                {/* Step indicator + connecting thread */}
                 <div className="flex flex-col items-center pt-1">
                   <div className="w-6 h-6 rounded-full border border-sage/20 bg-white flex items-center justify-center text-[10px] font-bold text-sage/50 flex-shrink-0 shadow-sm">
                     {label}
@@ -207,7 +155,6 @@ export function DashboardShell({
                     <div className="w-px flex-1 bg-sage/[0.12] mt-2" />
                   )}
                 </div>
-                {/* Card */}
                 <div className="flex-1 min-w-0 pb-5">
                   {card}
                 </div>

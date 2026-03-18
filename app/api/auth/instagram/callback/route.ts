@@ -17,7 +17,7 @@ export async function GET(req: NextRequest) {
   const redirectUri = `${origin}/api/auth/instagram/callback`;
 
   if (error || !code) {
-    return NextResponse.redirect(`${origin}/integrations?error=instagram_cancelled`);
+    return NextResponse.redirect(`${origin}/profile?error=instagram_cancelled`);
   }
 
   try {
@@ -50,7 +50,7 @@ export async function GET(req: NextRequest) {
     const debugInfo = encodeURIComponent(JSON.stringify(pagesRaw).slice(0, 500));
 
     if (pages.length === 0) {
-      return NextResponse.redirect(`${origin}/integrations?error=no_facebook_page&debug=${debugInfo}`);
+      return NextResponse.redirect(`${origin}/profile?error=no_facebook_page&debug=${debugInfo}`);
     }
 
     // 4. Find the IG Business Account linked to one of their pages
@@ -67,7 +67,7 @@ export async function GET(req: NextRequest) {
     }
 
     if (!igUserId) {
-      return NextResponse.redirect(`${origin}/integrations?error=no_instagram_business`);
+      return NextResponse.redirect(`${origin}/profile?error=no_instagram_business`);
     }
 
     // 5. Fetch IG profile
@@ -94,9 +94,9 @@ export async function GET(req: NextRequest) {
       })
       .eq('id', user.id);
 
-    return NextResponse.redirect(`${origin}/integrations?connected=true`);
+    return NextResponse.redirect(`${origin}/profile?connected=true`);
   } catch (err: any) {
     console.error('Instagram OAuth callback error:', err.message);
-    return NextResponse.redirect(`${origin}/integrations?error=oauth_failed`);
+    return NextResponse.redirect(`${origin}/profile?error=oauth_failed`);
   }
 }
