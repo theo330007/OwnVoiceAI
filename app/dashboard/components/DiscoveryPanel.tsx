@@ -366,7 +366,9 @@ export function DiscoveryPanel({
         <div>
           <h2 className="font-serif text-2xl text-sage">Content Discovery</h2>
           <p className="text-xs text-sage/50 mt-0.5">
-            Generate ideas for your pillars, or explore what's trending in your niche
+            {activeTab === 'ideas' && 'Generate ideas for your pillars, or explore what\'s trending in your niche'}
+            {activeTab === 'niche' && 'Emerging conversations and micro-movements specific to your niche — use these to stay ahead of your audience'}
+            {activeTab === 'macro' && 'Broad cultural, societal and behavioral shifts — find the bigger stories your content can tap into'}
           </p>
         </div>
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { FlaskConical, TrendingUp, FolderPlus, MessageSquare, ArrowRight, Sparkles, CalendarDays, CheckCircle2 } from 'lucide-react';
+import { FlaskConical, TrendingUp, FolderPlus, MessageSquare, ArrowRight, Sparkles, CalendarDays, CheckCircle2, Lightbulb } from 'lucide-react';
 import { DiscoveryPanel } from './DiscoveryPanel';
 import { WelcomeBanner } from './WelcomeBanner';
 import { HotTopicBubble } from './HotTopicBubble';
@@ -23,6 +23,34 @@ interface Props {
 }
 
 // ─── Wizard step cards ────────────────────────────────────────────────────────
+
+function DiscoverCard() {
+  return (
+    <div className="bg-white border border-warm-border rounded-3xl p-5 shadow-soft">
+      <div className="flex items-center gap-2.5 mb-3">
+        <div className="w-8 h-8 rounded-xl bg-sage/10 flex items-center justify-center flex-shrink-0">
+          <Lightbulb className="w-4 h-4 text-sage" />
+        </div>
+        <h3 className="font-serif text-base text-sage">Discover & Generate</h3>
+      </div>
+      <p className="text-xs text-sage/60 mb-4 leading-relaxed">
+        Spot trends in your niche and turn them into content ideas aligned with your pillars, cadence and content mix.
+      </p>
+      <ul className="space-y-2 mb-4">
+        {[
+          { icon: TrendingUp,  text: 'Niche & macro trend radar' },
+          { icon: Sparkles,    text: 'AI-powered idea generation' },
+          { icon: CalendarDays, text: 'Ideas auto-scheduled to calendar' },
+        ].map(({ icon: Icon, text }) => (
+          <li key={text} className="flex items-center gap-2 text-xs text-sage/70">
+            <Icon className="w-3.5 h-3.5 text-sage/40 flex-shrink-0" />
+            {text}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
 
 function StructureCard() {
   return (
@@ -50,6 +78,37 @@ function StructureCard() {
       </ul>
       <Link href="/editorial" className="flex items-center justify-center gap-1.5 w-full py-2.5 bg-dusty-rose hover:bg-dusty-rose/90 text-cream text-sm font-medium rounded-2xl transition-colors">
         View Calendar <ArrowRight className="w-3.5 h-3.5" />
+      </Link>
+    </div>
+  );
+}
+
+function AffineCard() {
+  return (
+    <div className="bg-white border border-warm-border rounded-3xl p-5 shadow-soft">
+      <div className="flex items-center gap-2.5 mb-3">
+        <div className="w-8 h-8 rounded-xl bg-sage/10 flex items-center justify-center flex-shrink-0">
+          <FolderPlus className="w-4 h-4 text-sage" />
+        </div>
+        <h3 className="font-serif text-base text-sage">Affine</h3>
+      </div>
+      <p className="text-xs text-sage/60 mb-4 leading-relaxed">
+        Save your best ideas as projects, develop them and track your content from draft to published.
+      </p>
+      <ul className="space-y-2 mb-4">
+        {[
+          { icon: FolderPlus,   text: 'Save ideas as projects' },
+          { icon: CheckCircle2, text: 'Track draft to published' },
+          { icon: MessageSquare, text: 'Refine with context & notes' },
+        ].map(({ icon: Icon, text }) => (
+          <li key={text} className="flex items-center gap-2 text-xs text-sage/70">
+            <Icon className="w-3.5 h-3.5 text-sage/40 flex-shrink-0" />
+            {text}
+          </li>
+        ))}
+      </ul>
+      <Link href="/projects" className="flex items-center justify-center gap-1.5 w-full py-2.5 bg-sage/10 hover:bg-sage/20 text-sage text-sm font-medium rounded-2xl transition-colors">
+        View Projects <ArrowRight className="w-3.5 h-3.5" />
       </Link>
     </div>
   );
@@ -109,8 +168,10 @@ export function DashboardShell({
   });
 
   const wizardSteps = [
-    { label: '01', card: <StructureCard /> },
-    { label: '02', card: <LabCard /> },
+    { label: '01', card: <DiscoverCard /> },
+    { label: '02', card: <StructureCard /> },
+    { label: '03', card: <AffineCard /> },
+    { label: '04', card: <LabCard /> },
   ];
 
   return (

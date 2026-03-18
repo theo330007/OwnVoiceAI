@@ -67,12 +67,20 @@ const SOURCE_COLORS: Record<string, string> = {
   'Niche Trends':   'bg-dusty-rose/10 text-dusty-rose',
 };
 
-// ─── Idea Card ────────────────────────────────────────────────────────────────
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function formatScheduledDate(date: string): string {
   const d = new Date(date + 'T00:00:00');
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
+
+const CONTENT_TYPE_STYLE: Record<string, string> = {
+  Value:     'bg-emerald-50 text-emerald-700',
+  Authority: 'bg-blue-50 text-blue-700',
+  Sales:     'bg-dusty-rose/10 text-dusty-rose',
+};
+
+// ─── Idea Card ────────────────────────────────────────────────────────────────
 
 function IdeaCard({
   idea,
@@ -88,6 +96,7 @@ function IdeaCard({
   const [saveState, setSaveState] = useState<null | 'loading' | { id: string }>(null);
   const sourceStyle = SOURCE_COLORS[idea.source_type] || 'bg-sage/10 text-sage';
   const angleOpt = ANGLE_OPTIONS.find(a => a.key === angle);
+  const ctStyle = idea.contentType ? CONTENT_TYPE_STYLE[idea.contentType] : 'bg-sage/10 text-sage';
 
   const handleSave = async () => {
     setSaveState('loading');
@@ -108,7 +117,17 @@ function IdeaCard({
 
   return (
     <div className="bg-white border border-warm-border rounded-2xl p-5 hover:border-sage/30 hover:shadow-soft transition-all flex flex-col">
-      {/* Badges */}
+      {/* Row 1: pillar reminder + content type */}
+      <div className="flex items-center justify-between mb-2">
+        <span className="text-[10px] text-sage/40 font-medium">{pillar}</span>
+        {idea.contentType && (
+          <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${ctStyle}`}>
+            {idea.contentType}
+          </span>
+        )}
+      </div>
+
+      {/* Row 2: source + angle + date */}
       <div className="flex items-center gap-2 mb-3 flex-wrap">
         <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${sourceStyle}`}>
           {idea.source_type}
@@ -182,7 +201,8 @@ export function IdeasPanel({ userId, pillars, strategy }: Props) {
   const [activeFormat, setActiveFormat] = useState<FormatKey>('carousel');
   const [sourceFilter, setSourceFilter] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [calendarBanner, setCalendarBanner] = useState<{ count: number; first: string; last: string } | null>(null);
+  const [scheduleState, setScheduleState] = useState<'idle' | 'pending' | 'saving' | 'done'>('idle');
+  const [scheduleMeta, setScheduleMeta] = useState<{ count: number; first: string; last: string } | null>(null);
 
   useEffect(() => {
     try { sessionStorage.setItem('ov_ideas', JSON.stringify(ideas)); } catch {}
@@ -194,6 +214,29 @@ export function IdeasPanel({ userId, pillars, strategy }: Props) {
     );
   };
 
+  const handleSchedule = async () => {
+    const currentIdeasForPillar = ideas[activePillar];
+    if (!currentIdeasForPillar) return;
+    setScheduleState('saving');
+    try {
+      const allIdeas = [
+        ...currentIdeasForPillar.carousel,
+        ...currentIdeasForPillar.reel,
+        ...currentIdeasForPillar.storytelling,
+        ...currentIdeasForPillar.sales,
+      ].filter(i => i.scheduled_date);
+      const res = await fetch('/api/ideas/schedule', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pillar: activePillar, ideas: allIdeas }),
+      });
+      if (!res.ok) throw new Error('Failed to schedule');
+      setScheduleState('done');
+    } catch {
+      setScheduleState('pending'); // revert so user can retry
+    }
+  };
+
   const handleGenerate = async () => {
     if (!activePillar || sources.length === 0) return;
     const pillar = pillars.find(p => p.title === activePillar);
@@ -202,6 +245,7 @@ export function IdeasPanel({ userId, pillars, strategy }: Props) {
     setIsGenerating(true);
     setError(null);
     setSourceFilter(null);
+    setScheduleState('idle');
     try {
       const res = await fetch('/api/ideas/generate', {
         method: 'POST',
@@ -213,7 +257,8 @@ export function IdeasPanel({ userId, pillars, strategy }: Props) {
       setIdeas(prev => ({ ...prev, [activePillar]: { ...data, pillar: activePillar, angle, sources } }));
       setActiveFormat('carousel');
       if (data.total_scheduled && data.first_date && data.last_date) {
-        setCalendarBanner({ count: data.total_scheduled, first: data.first_date, last: data.last_date });
+        setScheduleMeta({ count: data.total_scheduled, first: data.first_date, last: data.last_date });
+        setScheduleState('pending');
       }
     } catch (err: any) {
       setError(err.message || 'Failed to generate ideas');
@@ -255,30 +300,7 @@ export function IdeasPanel({ userId, pillars, strategy }: Props) {
 
   return (
     <div className="space-y-5">
-      {/* A — Pillar selector */}
-      <div>
-        <p className="text-[10px] font-bold text-sage/40 uppercase tracking-widest mb-2">Content Pillar</p>
-        <div className="flex flex-wrap gap-2">
-          {pillars.map(p => (
-            <button
-              key={p.title}
-              onClick={() => { setActivePillar(p.title); setSourceFilter(null); }}
-              className={`px-3.5 py-1.5 rounded-xl text-sm font-medium border transition-all ${
-                activePillar === p.title
-                  ? 'bg-sage text-cream border-sage shadow-sm'
-                  : 'bg-white text-sage/60 border-sage/15 hover:border-sage/35 hover:text-sage'
-              }`}
-            >
-              {p.title}
-              {ideas[p.title] && (
-                <CheckCircle2 className="inline-block w-3 h-3 ml-1.5 opacity-70" />
-              )}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* B — Controls */}
+      {/* A — Controls */}
       <div className="flex flex-col sm:flex-row gap-4 p-4 bg-sage/3 border border-sage/8 rounded-2xl">
         {/* Angle */}
         <div className="flex-1">
@@ -356,14 +378,41 @@ export function IdeasPanel({ userId, pillars, strategy }: Props) {
         )}
       </div>
 
-      {/* Calendar banner */}
-      {calendarBanner && (
-        <div className="flex items-center gap-3 px-4 py-3 bg-sage/8 border border-sage/15 rounded-2xl">
-          <CalendarCheck className="w-4 h-4 text-sage shrink-0" />
-          <p className="text-xs text-sage flex-1">
-            <span className="font-semibold">{calendarBanner.count} ideas</span> added to your editorial calendar
-            {' '}from <span className="font-semibold">{formatScheduledDate(calendarBanner.first)}</span> to{' '}
-            <span className="font-semibold">{formatScheduledDate(calendarBanner.last)}</span>.
+      {/* Calendar scheduling banner */}
+      {scheduleMeta && scheduleState === 'pending' && (
+        <div className="flex items-center gap-3 px-4 py-3 bg-amber-50 border border-amber-200 rounded-2xl">
+          <CalendarCheck className="w-4 h-4 text-amber-600 shrink-0" />
+          <p className="text-xs text-amber-800 flex-1">
+            <span className="font-semibold">{scheduleMeta.count} ideas</span> ready — scheduled from{' '}
+            <span className="font-semibold">{formatScheduledDate(scheduleMeta.first)}</span> to{' '}
+            <span className="font-semibold">{formatScheduledDate(scheduleMeta.last)}</span>.
+            Add them to your editorial calendar?
+          </p>
+          <button
+            onClick={handleSchedule}
+            className="shrink-0 px-3 py-1.5 bg-sage text-cream text-xs font-semibold rounded-lg hover:bg-sage/90 transition-colors"
+          >
+            Add to Calendar
+          </button>
+          <button
+            onClick={() => setScheduleState('idle')}
+            className="shrink-0 text-amber-400 hover:text-amber-600 transition-colors text-xs"
+          >
+            ✕
+          </button>
+        </div>
+      )}
+      {scheduleState === 'saving' && (
+        <div className="flex items-center gap-2 px-4 py-3 bg-sage/8 border border-sage/15 rounded-2xl">
+          <Loader2 className="w-4 h-4 text-sage animate-spin shrink-0" />
+          <p className="text-xs text-sage">Adding ideas to your calendar…</p>
+        </div>
+      )}
+      {scheduleState === 'done' && scheduleMeta && (
+        <div className="flex items-center gap-3 px-4 py-3 bg-green-50 border border-green-200 rounded-2xl">
+          <CheckCircle2 className="w-4 h-4 text-green-600 shrink-0" />
+          <p className="text-xs text-green-800 flex-1">
+            <span className="font-semibold">{scheduleMeta.count} ideas</span> added to your editorial calendar.
           </p>
           <Link
             href="/editorial"
@@ -371,12 +420,6 @@ export function IdeasPanel({ userId, pillars, strategy }: Props) {
           >
             View calendar →
           </Link>
-          <button
-            onClick={() => setCalendarBanner(null)}
-            className="shrink-0 text-sage/30 hover:text-sage/60 transition-colors text-xs"
-          >
-            ✕
-          </button>
         </div>
       )}
 

@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
-import { createClient } from '@/lib/supabase';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
@@ -223,32 +222,6 @@ QUALITY RULES:
       storytelling: scheduledInterleaved.filter(i => i.format === 'storytelling'),
       sales:        scheduledInterleaved.filter(i => i.format === 'sales'),
     };
-
-    // ─── Save to quick_posts ──────────────────────────────────────────────────
-    const newQuickPosts = scheduledInterleaved.map(idea => ({
-      id: crypto.randomUUID(),
-      date: idea.scheduled_date,
-      day_name: idea.day_name,
-      topic: idea.concept.length > 100 ? idea.concept.slice(0, 97) + '…' : idea.concept,
-      pillar: pillar.title,
-      contentType: idea.contentType as ContentType,
-      objective: FORMAT_OBJECTIVE[idea.format as FormatKey],
-      format: idea.format.charAt(0).toUpperCase() + idea.format.slice(1),
-      hook: idea.hook,
-      source: 'discover',
-      created_at: new Date().toISOString(),
-    }));
-
-    const supabase = await createClient();
-    const existing: any[] = (user.metadata as any)?.quick_posts ?? [];
-    // Remove old discover ideas for this same pillar, keep all others
-    const kept = existing.filter((p: any) => !(p.source === 'discover' && p.pillar === pillar.title));
-    const updated = [...newQuickPosts, ...kept].slice(0, 200);
-
-    await supabase
-      .from('users')
-      .update({ metadata: { ...(user.metadata || {}), quick_posts: updated } })
-      .eq('id', user.id);
 
     return NextResponse.json({
       ...withDates,
