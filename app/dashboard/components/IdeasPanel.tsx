@@ -3,10 +3,10 @@
 import { useState, useEffect } from 'react';
 import {
   Sparkles, Loader2, RefreshCcw, Lightbulb, LayoutGrid, Video,
-  BookHeart, ShoppingBag, CheckCircle2, FolderPlus, ExternalLink, CalendarCheck,
+  BookHeart, ShoppingBag, CheckCircle2, CalendarCheck, CalendarPlus, Play,
 } from 'lucide-react';
 import Link from 'next/link';
-import { createProjectFromIdea } from '@/app/actions/projects';
+import { useRouter } from 'next/navigation';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -84,34 +84,41 @@ const CONTENT_TYPE_STYLE: Record<string, string> = {
 
 function IdeaCard({
   idea,
-  angle,
   format,
   pillar,
+  onAdded,
 }: {
   idea: IdeaItem;
-  angle: string;
   format: FormatKey;
   pillar: string;
+  onAdded: () => void;
 }) {
-  const [saveState, setSaveState] = useState<null | 'loading' | { id: string }>(null);
+  const router = useRouter();
+  const [addState, setAddState] = useState<'idle' | 'loading' | 'done' | 'error'>('idle');
   const sourceStyle = SOURCE_COLORS[idea.source_type] || 'bg-sage/10 text-sage';
-  const angleOpt = ANGLE_OPTIONS.find(a => a.key === angle);
   const ctStyle = idea.contentType ? CONTENT_TYPE_STYLE[idea.contentType] : 'bg-sage/10 text-sage';
 
-  const handleSave = async () => {
-    setSaveState('loading');
+  const handleOpenInLab = () => {
+    const params = new URLSearchParams({ trend: idea.hook });
+    params.set('trendDesc', idea.concept);
+    router.push(`/lab?${params.toString()}`);
+  };
+
+  const handleAddToCalendar = async () => {
+    if (!idea.scheduled_date) return;
+    setAddState('loading');
     try {
-      const project = await createProjectFromIdea({
-        hook: idea.hook,
-        concept: idea.concept,
-        cta: idea.cta,
-        pillar,
-        format,
-        source_type: idea.source_type,
+      const res = await fetch('/api/ideas/schedule', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pillar, ideas: [{ ...idea, format }] }),
       });
-      setSaveState({ id: project.id });
+      if (!res.ok) throw new Error();
+      setAddState('done');
+      setTimeout(() => onAdded(), 1200); // brief "done" flash then remove
     } catch {
-      setSaveState(null);
+      setAddState('error');
+      setTimeout(() => setAddState('idle'), 2000);
     }
   };
 
@@ -127,16 +134,11 @@ function IdeaCard({
         )}
       </div>
 
-      {/* Row 2: source + angle + date */}
+      {/* Row 2: source + date */}
       <div className="flex items-center gap-2 mb-3 flex-wrap">
         <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${sourceStyle}`}>
           {idea.source_type}
         </span>
-        {angle !== 'standard' && angleOpt?.badgeBg && (
-          <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${angleOpt.badgeBg} ${angleOpt.badgeText}`}>
-            {angleOpt.label}
-          </span>
-        )}
         {idea.scheduled_date && (
           <span className="ml-auto flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-sage/8 text-sage/60">
             <CalendarCheck className="w-3 h-3" />
@@ -148,36 +150,51 @@ function IdeaCard({
       {/* Content */}
       <h3 className="font-serif font-semibold text-sage text-sm leading-snug mb-1.5">{idea.hook}</h3>
       <p className="text-xs text-sage/60 leading-relaxed line-clamp-2 mb-2">{idea.concept}</p>
-      <p className="text-xs text-dusty-rose font-medium mb-4">{idea.cta}</p>
+      <p className="text-xs text-dusty-rose font-medium mb-3">{idea.cta}</p>
 
-      {/* Save as Project */}
+      {/* Open in Lab */}
+      <button
+        onClick={handleOpenInLab}
+        className="w-full flex items-center justify-center gap-1.5 py-1.5 mb-3 rounded-xl bg-gradient-to-r from-sage to-dusty-rose text-cream text-xs font-medium hover:opacity-90 transition-opacity"
+      >
+        <Play className="w-3 h-3" />
+        Open in Lab
+      </button>
+
+      {/* Add to Calendar */}
       <div className="mt-auto">
-        {saveState === null && (
+        {addState === 'idle' && (
           <button
-            onClick={handleSave}
-            className="w-full flex items-center justify-center gap-1.5 py-2 rounded-xl border border-sage/15 bg-sage/5 hover:bg-sage/10 text-sage text-xs font-medium transition-colors"
+            onClick={handleAddToCalendar}
+            disabled={!idea.scheduled_date}
+            className="w-full flex items-center justify-center gap-1.5 py-2 rounded-xl border border-sage/15 bg-sage/5 hover:bg-sage/10 text-sage text-xs font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
           >
-            <FolderPlus className="w-3.5 h-3.5" />
-            Save as Project
+            <CalendarPlus className="w-3.5 h-3.5" />
+            Add to Calendar
           </button>
         )}
-        {saveState === 'loading' && (
+        {addState === 'loading' && (
           <div className="w-full flex items-center justify-center gap-1.5 py-2 rounded-xl border border-sage/15 bg-sage/5 text-sage/40 text-xs font-medium">
-            <Loader2 className="w-3 h-3 animate-spin" /> Saving…
+            <Loader2 className="w-3 h-3 animate-spin" /> Adding…
           </div>
         )}
-        {saveState !== null && saveState !== 'loading' && (
+        {addState === 'done' && (
           <div className="flex items-center gap-2 py-2 px-3 rounded-xl bg-green-50 border border-green-100">
             <span className="flex items-center gap-1 text-xs text-sage font-semibold">
               <CheckCircle2 className="w-3.5 h-3.5 text-green-500" />
-              Saved
+              Added · {idea.day_name?.slice(0, 3)} {formatScheduledDate(idea.scheduled_date!)}
             </span>
             <Link
-              href="/projects"
-              className="ml-auto flex items-center gap-1 text-xs text-dusty-rose hover:text-dusty-rose/80 font-medium transition-colors"
+              href="/editorial"
+              className="ml-auto text-[11px] text-dusty-rose hover:text-dusty-rose/80 font-medium transition-colors underline"
             >
-              Open <ExternalLink className="w-3 h-3" />
+              View →
             </Link>
+          </div>
+        )}
+        {addState === 'error' && (
+          <div className="w-full flex items-center justify-center gap-1.5 py-2 rounded-xl border border-red-100 bg-red-50 text-red-500 text-xs font-medium">
+            Failed — try again
           </div>
         )}
       </div>
@@ -238,7 +255,7 @@ export function IdeasPanel({ userId, pillars, strategy }: Props) {
   };
 
   const handleGenerate = async () => {
-    if (!activePillar || sources.length === 0) return;
+    if (!activePillar) return;
     const pillar = pillars.find(p => p.title === activePillar);
     if (!pillar) return;
 
@@ -300,50 +317,6 @@ export function IdeasPanel({ userId, pillars, strategy }: Props) {
 
   return (
     <div className="space-y-5">
-      {/* A — Controls */}
-      <div className="flex flex-col sm:flex-row gap-4 p-4 bg-sage/3 border border-sage/8 rounded-2xl">
-        {/* Angle */}
-        <div className="flex-1">
-          <p className="text-[10px] font-bold text-sage/40 uppercase tracking-widest mb-2">Angle</p>
-          <div className="flex gap-1.5 flex-wrap">
-            {ANGLE_OPTIONS.map(opt => (
-              <button
-                key={opt.key}
-                onClick={() => setAngle(opt.key)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${
-                  angle === opt.key
-                    ? opt.key === 'standard'
-                      ? 'bg-sage text-cream border-sage shadow-sm'
-                      : `${opt.badgeBg} ${opt.badgeText} border-transparent shadow-sm`
-                    : 'bg-white text-sage/50 border-sage/15 hover:border-sage/30 hover:text-sage'
-                }`}
-              >
-                {opt.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Sources */}
-        <div className="flex-1">
-          <p className="text-[10px] font-bold text-sage/40 uppercase tracking-widest mb-2">Draw from</p>
-          <div className="flex flex-wrap gap-1.5">
-            {ALL_SOURCES.map(s => (
-              <button
-                key={s}
-                onClick={() => toggleSource(s)}
-                className={`px-2.5 py-1 rounded-lg text-[11px] font-medium border transition-all ${
-                  sources.includes(s)
-                    ? `${SOURCE_COLORS[s] || 'bg-sage/10 text-sage'} border-transparent`
-                    : 'bg-white text-sage/40 border-sage/15 hover:border-sage/30'
-                }`}
-              >
-                {s}
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
 
       {/* C — Generate button */}
       <div className="flex items-center gap-3">
@@ -356,7 +329,7 @@ export function IdeasPanel({ userId, pillars, strategy }: Props) {
             </span>
             <button
               onClick={handleGenerate}
-              disabled={isGenerating || sources.length === 0}
+              disabled={isGenerating}
               className="flex items-center gap-2 px-4 py-2 bg-sage/10 hover:bg-sage/20 text-sage text-sm font-medium rounded-xl transition-all disabled:opacity-50"
             >
               {isGenerating ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCcw className="w-4 h-4" />}
@@ -366,7 +339,7 @@ export function IdeasPanel({ userId, pillars, strategy }: Props) {
         ) : (
           <button
             onClick={handleGenerate}
-            disabled={isGenerating || sources.length === 0}
+            disabled={isGenerating}
             className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-sage to-sage/80 hover:from-sage/90 hover:to-sage/70 text-cream text-sm font-medium rounded-xl transition-all disabled:opacity-60 shadow-sm"
           >
             {isGenerating ? (
@@ -489,9 +462,16 @@ export function IdeasPanel({ userId, pillars, strategy }: Props) {
                 <IdeaCard
                   key={i}
                   idea={idea}
-                  angle={currentIdeas.angle}
                   format={activeFormat}
                   pillar={activePillar}
+                  onAdded={() => {
+                    setIdeas(prev => {
+                      const set = prev[activePillar];
+                      if (!set) return prev;
+                      const updated = { ...set, [activeFormat]: set[activeFormat].filter(x => x !== idea) };
+                      return { ...prev, [activePillar]: updated };
+                    });
+                  }}
                 />
               ))}
             </div>

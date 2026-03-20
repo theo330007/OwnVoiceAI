@@ -16,6 +16,12 @@ import {
   ChevronDown,
   ChevronUp,
   Lightbulb,
+  CalendarPlus,
+  CheckCircle2,
+  LayoutGrid,
+  Video,
+  BookHeart,
+  ShoppingBag,
 } from 'lucide-react';
 import { IdeasPanel } from './IdeasPanel';
 import { generateStrategicInsight, scrapeUserInstagramTrends } from '@/app/actions/user-trends';
@@ -47,6 +53,131 @@ function momentumBadge(score: number | null) {
   if (score >= 75) return { label: 'Rising', className: 'bg-green-100 text-green-700' };
   if (score >= 50) return { label: 'Active', className: 'bg-dusty-rose/20 text-dusty-rose' };
   return { label: 'Niche', className: 'bg-sage/10 text-sage' };
+}
+
+// ─── Shared: format options ───────────────────────────────────────────────────
+
+const SCHEDULE_FORMATS = [
+  { key: 'carousel',     label: 'Carousel', icon: LayoutGrid },
+  { key: 'reel',         label: 'Reel',     icon: Video },
+  { key: 'storytelling', label: 'Story',    icon: BookHeart },
+  { key: 'sales',        label: 'Sales',    icon: ShoppingBag },
+] as const;
+
+// ─── AddToCalendarInline ──────────────────────────────────────────────────────
+
+function AddToCalendarInline({
+  trendTitle,
+  trendDescription,
+  pillars,
+}: {
+  trendTitle: string;
+  trendDescription?: string;
+  pillars: { title: string }[];
+}) {
+  const [open, setOpen] = useState(false);
+  const [format, setFormat] = useState<string>('carousel');
+  const [pillar, setPillar] = useState(pillars[0]?.title || '');
+  const [state, setState] = useState<'idle' | 'loading' | 'done' | 'error'>('idle');
+  const [result, setResult] = useState<{ date: string; day_name: string } | null>(null);
+
+  const handleSchedule = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setState('loading');
+    try {
+      const res = await fetch('/api/ideas/schedule-from-trend', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ trendTitle, trendDescription, format, pillar }),
+      });
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      setResult(data);
+      setState('done');
+      setOpen(false);
+      setTimeout(() => { setState('idle'); setResult(null); }, 3000);
+    } catch {
+      setState('error');
+      setTimeout(() => setState('idle'), 2000);
+    }
+  };
+
+  if (state === 'done' && result) {
+    return (
+      <div className="flex items-center gap-2 mt-3 px-3 py-2 bg-green-50 border border-green-100 rounded-xl" onClick={e => e.stopPropagation()}>
+        <CheckCircle2 className="w-3.5 h-3.5 text-green-500 shrink-0" />
+        <span className="text-xs text-sage font-medium flex-1">
+          Added · {result.day_name.slice(0, 3)} {new Date(result.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+        </span>
+      </div>
+    );
+  }
+
+  if (!open) {
+    return (
+      <button
+        onClick={e => { e.stopPropagation(); setOpen(true); }}
+        className="mt-3 w-full flex items-center justify-center gap-1.5 py-1.5 rounded-xl border border-sage/15 bg-sage/5 hover:bg-sage/10 text-sage text-xs font-medium transition-colors"
+      >
+        <CalendarPlus className="w-3.5 h-3.5" />
+        Add to Calendar
+      </button>
+    );
+  }
+
+  return (
+    <div className="mt-3 p-3 bg-sage/5 border border-sage/10 rounded-xl space-y-2.5" onClick={e => e.stopPropagation()}>
+      {/* Format picker */}
+      <div className="flex gap-1">
+        {SCHEDULE_FORMATS.map(({ key, label, icon: Icon }) => (
+          <button
+            key={key}
+            onClick={() => setFormat(key)}
+            className={`flex-1 flex flex-col items-center gap-0.5 py-1.5 rounded-lg text-[10px] font-semibold transition-all ${
+              format === key ? 'bg-sage text-cream' : 'bg-white text-sage/50 hover:text-sage border border-sage/10'
+            }`}
+          >
+            <Icon className="w-3 h-3" />
+            {label}
+          </button>
+        ))}
+      </div>
+      {/* Pillar picker */}
+      {pillars.length > 0 && (
+        <div className="flex flex-wrap gap-1">
+          {pillars.map(p => (
+            <button
+              key={p.title}
+              onClick={() => setPillar(p.title)}
+              className={`px-2 py-0.5 rounded-full text-[10px] font-medium transition-all ${
+                pillar === p.title ? 'bg-dusty-rose text-cream' : 'bg-white text-sage/50 border border-sage/15 hover:border-sage/30'
+              }`}
+            >
+              {p.title}
+            </button>
+          ))}
+        </div>
+      )}
+      {/* Actions */}
+      <div className="flex gap-1.5">
+        <button
+          onClick={handleSchedule}
+          disabled={state === 'loading'}
+          className="flex-1 flex items-center justify-center gap-1.5 py-1.5 bg-sage text-cream rounded-lg text-xs font-semibold transition-colors hover:bg-sage/90 disabled:opacity-60"
+        >
+          {state === 'loading' ? <Loader2 className="w-3 h-3 animate-spin" /> : <CalendarPlus className="w-3 h-3" />}
+          {state === 'loading' ? 'Adding…' : 'Add'}
+        </button>
+        <button
+          onClick={e => { e.stopPropagation(); setOpen(false); }}
+          className="px-3 py-1.5 bg-white border border-sage/15 rounded-lg text-xs text-sage/50 hover:text-sage transition-colors"
+        >
+          Cancel
+        </button>
+      </div>
+      {state === 'error' && <p className="text-xs text-red-500 text-center">Failed — try again</p>}
+    </div>
+  );
 }
 
 // --- InsightTabView ---
@@ -201,6 +332,7 @@ function TrendCard({
   onSelect,
   onInsightGenerated,
   onOpenModal,
+  pillars,
 }: {
   trend: Trend;
   userId: string;
@@ -209,6 +341,7 @@ function TrendCard({
   onSelect: () => void;
   onInsightGenerated: () => void;
   onOpenModal: () => void;
+  pillars: { title: string }[];
 }) {
   const router = useRouter();
   const momentum = momentumBadge(trend.relevance_score);
@@ -288,24 +421,31 @@ function TrendCard({
         </div>
       </div>
 
-      {/* Macro: Open in Lab button */}
-      {isMacro && (
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            router.push(`/lab?trend=${encodeURIComponent(trend.title)}`);
-          }}
-          className="w-full flex items-center justify-center gap-2 py-2 rounded-xl bg-gradient-to-r from-sage to-dusty-rose text-cream text-sm font-medium hover:opacity-90 transition-opacity"
-        >
-          <Play className="w-3.5 h-3.5" />
-          Open in Lab
-        </button>
-      )}
+      {/* Open in Lab — both macro and niche */}
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          const params = new URLSearchParams({ trend: trend.title });
+          if (trend.description) params.set('trendDesc', trend.description);
+          router.push(`/lab?${params.toString()}`);
+        }}
+        className="w-full flex items-center justify-center gap-2 py-2 mb-1 rounded-xl bg-gradient-to-r from-sage to-dusty-rose text-cream text-sm font-medium hover:opacity-90 transition-opacity"
+      >
+        <Play className="w-3.5 h-3.5" />
+        Open in Lab
+      </button>
+
+      {/* Add to Calendar */}
+      <AddToCalendarInline
+        trendTitle={trend.title}
+        trendDescription={trend.description ?? undefined}
+        pillars={pillars}
+      />
 
       {/* Niche: expanded insight section */}
       {isSelected && !isMacro && (
         <div
-          className="border-t border-warm-border mt-1 pt-4"
+          className="border-t border-warm-border mt-3 pt-4"
           onClick={(e) => e.stopPropagation()}
         >
           {existingInsight ? (
@@ -482,6 +622,7 @@ export function DiscoveryPanel({
                 }
                 onInsightGenerated={() => router.refresh()}
                 onOpenModal={() => setModalTrend(trend)}
+                pillars={pillars}
               />
             );
           })}
@@ -493,6 +634,7 @@ export function DiscoveryPanel({
         trend={modalTrend}
         isOpen={modalTrend !== null}
         onClose={() => setModalTrend(null)}
+        pillars={pillars}
       />
     </div>
   );

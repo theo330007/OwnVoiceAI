@@ -2,13 +2,17 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Send, Loader2, FolderPlus, ChevronRight, CheckCircle2 } from 'lucide-react';
+import { Send, Loader2, CheckCircle2, CalendarPlus, LayoutGrid, Video, BookHeart, ShoppingBag } from 'lucide-react';
 import { ValidationResult } from './ValidationResult';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { createProjectFromConversation } from '@/app/actions/lab';
 
-type ContentType = 'educational' | 'behind_the_scenes' | 'promotional' | 'interactive';
+const SCHEDULE_FORMATS = [
+  { key: 'carousel',     label: 'Carousel', icon: LayoutGrid },
+  { key: 'reel',         label: 'Reel',     icon: Video },
+  { key: 'storytelling', label: 'Story',    icon: BookHeart },
+  { key: 'sales',        label: 'Sales',    icon: ShoppingBag },
+] as const;
 
 // Returns 4 example prompts tailored to the user's niche/industries.
 // Falls back gracefully when no profile data is available.
@@ -62,21 +66,26 @@ function getSuggestions(user: any): string[] {
   ];
 }
 
-const CONTENT_TYPES: { type: ContentType; label: string; emoji: string }[] = [
-  { type: 'educational', label: 'Educational', emoji: '📚' },
-  { type: 'behind_the_scenes', label: 'Behind the Scenes', emoji: '🎬' },
-  { type: 'promotional', label: 'Promotional', emoji: '✨' },
-  { type: 'interactive', label: 'Interactive', emoji: '💬' },
-];
 
-export function ChatInterface({ user }: { user: any }) {
+export function ChatInterface({
+  user,
+  initialTrend,
+  pillars = [],
+}: {
+  user: any;
+  initialTrend?: { title?: string; description?: string };
+  pillars?: { title: string }[];
+}) {
   const router = useRouter();
   const [messages, setMessages] = useState<any[]>([]);
   const [input, setInput] = useState('');
   const [isStreaming, setIsStreaming] = useState(false);
-  const [showCreateProject, setShowCreateProject] = useState(false);
-  const [creatingProject, setCreatingProject] = useState(false);
+  const [calFormat, setCalFormat] = useState('carousel');
+  const [calPillar, setCalPillar] = useState(pillars[0]?.title || '');
+  const [calState, setCalState] = useState<'idle' | 'loading' | 'done' | 'error'>('idle');
+  const [calResult, setCalResult] = useState<{ date: string; day_name: string } | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const trendSubmitted = useRef(false);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -108,29 +117,23 @@ export function ChatInterface({ user }: { user: any }) {
     };
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!input.trim() || isStreaming) return;
-
-    const userMessage = { role: 'user', content: input };
-    const updatedMessages = [...messages, userMessage];
+  const submitMessage = async (text: string, currentMessages: any[]) => {
+    if (!text.trim() || isStreaming) return;
+    const userMessage = { role: 'user', content: text };
+    const updatedMessages = [...currentMessages, userMessage];
     setMessages(updatedMessages);
     setInput('');
     setIsStreaming(true);
-
     let assistantContent = '';
-
-    // Build conversation history from prior messages (exclude current)
-    const conversationHistory = messages
+    const conversationHistory = currentMessages
       .filter((m) => m.role === 'user' || m.role === 'assistant')
       .map((m) => ({ role: m.role, content: m.content }));
-
     try {
       const response = await fetch('/api/validate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          query: input,
+          query: text,
           userProfile: buildUserProfile(),
           conversationHistory,
         }),
@@ -257,21 +260,54 @@ export function ChatInterface({ user }: { user: any }) {
     }
   };
 
-  const handleCreateProject = async (contentType: ContentType) => {
-    setCreatingProject(true);
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    submitMessage(input, messages);
+  };
+
+  // Auto-submit when coming from a trend card
+  useEffect(() => {
+    if (!initialTrend?.title || trendSubmitted.current) return;
+    trendSubmitted.current = true;
+    const msg = initialTrend.description
+      ? `Analyse this trend for my content strategy:\n\n**${initialTrend.title}**\n${initialTrend.description}\n\nHow can I create content around this trend that fits my brand and audience?`
+      : `Analyse this trend for my content strategy: "${initialTrend.title}". How can I create content around it that fits my brand and audience?`;
+    // Small delay to let the component mount fully
+    setTimeout(() => submitMessage(msg, []), 300);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleAddToCalendar = async () => {
+    setCalState('loading');
+    // Extract topic from first user message
+    const firstUserMsg = messages.find((m) => m.role === 'user');
+    const topic = firstUserMsg?.content?.split('\n')[0]?.slice(0, 120) || 'Lab idea';
+    // Extract latest validation result
+    const latestValidation = [...messages].reverse().find((m) => m.validationResult)?.validationResult;
+    const bestHook = latestValidation?.refined_hooks?.[0] || topic;
+
+    const labData = latestValidation ? {
+      refined_hooks: latestValidation.refined_hooks ?? [],
+      credibility_score: latestValidation.scientific_anchor?.credibility_score ?? null,
+      key_findings: latestValidation.scientific_anchor?.key_findings ?? null,
+      macro_trends: latestValidation.trend_alignment?.macro_trends ?? [],
+      niche_trends: latestValidation.trend_alignment?.niche_trends ?? [],
+      relevance_score: latestValidation.relevance_score ?? null,
+    } : undefined;
+
     try {
-      const workflowId = await createProjectFromConversation(
-        messages.filter((m) => m.role === 'user' || m.role === 'assistant').map((m) => ({
-          role: m.role,
-          content: m.content,
-        })),
-        contentType
-      );
-      router.push(`/lab/workflow/${workflowId}`);
-    } catch (error: any) {
-      console.error('Error creating project:', error);
-      setCreatingProject(false);
-      setShowCreateProject(false);
+      const res = await fetch('/api/ideas/schedule-from-lab', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ topic, hook: bestHook, format: calFormat, pillar: calPillar, labData }),
+      });
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      setCalResult(data);
+      setCalState('done');
+    } catch {
+      setCalState('error');
+      setTimeout(() => setCalState('idle'), 2000);
     }
   };
 
@@ -352,47 +388,63 @@ export function ChatInterface({ user }: { user: any }) {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Create Project panel */}
+      {/* Add to Calendar panel */}
       {hasExchange && (
         <div className="border-t border-sage/10 px-6 py-4">
-          {showCreateProject ? (
-            <div className="space-y-3">
-              <p className="text-sm font-medium text-sage">
-                What type of content do you want to create?
+          {calState === 'done' && calResult ? (
+            <div className="flex items-center gap-3 px-4 py-3 bg-green-50 border border-green-200 rounded-2xl">
+              <CheckCircle2 className="w-4 h-4 text-green-600 shrink-0" />
+              <p className="text-sm text-green-800 flex-1">
+                Added to your calendar · <span className="font-semibold">{calResult.day_name} {new Date(calResult.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
               </p>
-              <div className="flex flex-wrap gap-2">
-                {CONTENT_TYPES.map(({ type, label, emoji }) => (
+              <a href="/editorial" className="text-xs font-semibold text-dusty-rose hover:text-dusty-rose/80 underline transition-colors">
+                View calendar →
+              </a>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <p className="text-xs font-semibold text-sage/40 uppercase tracking-wider">Add to Calendar</p>
+              {/* Format picker */}
+              <div className="flex gap-2">
+                {SCHEDULE_FORMATS.map(({ key, label, icon: Icon }) => (
                   <button
-                    key={type}
-                    onClick={() => handleCreateProject(type)}
-                    disabled={creatingProject}
-                    className="flex items-center gap-2 px-4 py-2 bg-sage/5 hover:bg-sage/10 border border-sage/15 rounded-full text-sm text-sage font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    key={key}
+                    onClick={() => setCalFormat(key)}
+                    className={`flex-1 flex flex-col items-center gap-1 py-2 rounded-xl text-xs font-semibold transition-all ${
+                      calFormat === key ? 'bg-sage text-cream' : 'bg-sage/5 text-sage/50 hover:text-sage border border-sage/10'
+                    }`}
                   >
-                    {creatingProject ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                    ) : (
-                      <span>{emoji}</span>
-                    )}
+                    <Icon className="w-3.5 h-3.5" />
                     {label}
-                    {!creatingProject && <ChevronRight className="w-3 h-3 text-sage/40" />}
                   </button>
                 ))}
               </div>
+              {/* Pillar picker */}
+              {pillars.length > 0 && (
+                <div className="flex flex-wrap gap-1.5">
+                  {pillars.map((p) => (
+                    <button
+                      key={p.title}
+                      onClick={() => setCalPillar(p.title)}
+                      className={`px-3 py-1 rounded-full text-xs font-medium transition-all ${
+                        calPillar === p.title ? 'bg-dusty-rose text-cream' : 'bg-sage/5 text-sage/50 border border-sage/15 hover:border-sage/30'
+                      }`}
+                    >
+                      {p.title}
+                    </button>
+                  ))}
+                </div>
+              )}
               <button
-                onClick={() => setShowCreateProject(false)}
-                className="text-xs text-sage/40 hover:text-sage/60 transition-colors"
+                onClick={handleAddToCalendar}
+                disabled={calState === 'loading'}
+                className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-sage to-sage/80 hover:from-sage/90 hover:to-sage/70 text-cream rounded-xl text-sm font-semibold transition-all disabled:opacity-60"
               >
-                Cancel
+                {calState === 'loading' ? <Loader2 className="w-4 h-4 animate-spin" /> : <CalendarPlus className="w-4 h-4" />}
+                {calState === 'loading' ? 'Adding…' : 'Add to Calendar'}
               </button>
+              {calState === 'error' && <p className="text-xs text-red-500">Failed — try again</p>}
             </div>
-          ) : (
-            <button
-              onClick={() => setShowCreateProject(true)}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-dusty-rose/10 hover:bg-dusty-rose/15 text-dusty-rose rounded-full text-sm font-medium transition-colors"
-            >
-              <FolderPlus className="w-4 h-4" />
-              Create Project from this conversation
-            </button>
           )}
         </div>
       )}

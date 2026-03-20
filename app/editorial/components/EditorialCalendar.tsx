@@ -3,12 +3,13 @@
 import { useState, useRef, useEffect } from 'react';
 import {
   CalendarDays, Loader2, RefreshCcw, Sparkles, BookOpen, TrendingUp,
-  ShoppingBag, ChevronLeft, ChevronRight, FolderOpen, X, ExternalLink, Settings2, Plus,
+  ShoppingBag, ChevronLeft, ChevronRight, FolderOpen, X, ExternalLink, Settings2, Plus, Table2,
 } from 'lucide-react';
 import Link from 'next/link';
 import type { LucideIcon } from 'lucide-react';
 import type { Project } from '@/app/actions/projects';
-import { PostDetailModal } from './PostDetailModal';
+import { PostDetailModal, STATUS_CONFIG } from './PostDetailModal';
+import type { PostStatus } from './PostDetailModal';
 import { CreatePostModal } from './CreatePostModal';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -36,7 +37,15 @@ interface PostSlot {
   project_id?: string | null;
   event_tag?: string;
   is_suggestion?: boolean;
+  quick_post_id?: string;
   trend_id?: string;
+  status?: PostStatus;
+  source?: string;
+  lab_hooks?: string[];
+  lab_credibility_score?: number | null;
+  lab_key_findings?: string | null;
+  lab_trend_alignment?: string[];
+  lab_relevance_score?: number | null;
 }
 
 interface WeekPlan {
@@ -64,6 +73,14 @@ interface QuickPost {
   contentType: 'Value' | 'Authority' | 'Sales';
   objective: string;
   format: string;
+  hook?: string;
+  source?: string;
+  status?: PostStatus;
+  lab_hooks?: string[];
+  lab_credibility_score?: number | null;
+  lab_key_findings?: string | null;
+  lab_trend_alignment?: string[];
+  lab_relevance_score?: number | null;
 }
 
 interface Props {
@@ -319,7 +336,7 @@ export function EditorialCalendar({ userId, pillars, objectives, nicheContext, e
   const [isSaving, setIsSaving] = useState(false);
   const [generatingPost, setGeneratingPost] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [viewMode, setViewMode] = useState<'monthly' | 'routine'>('monthly');
+  const [viewMode, setViewMode] = useState<'monthly' | 'table' | 'routine'>('monthly');
   const [viewMonth, setViewMonth] = useState<{ year: number; month: number }>(() => {
     if (initialMonth) return initialMonth;
     const d = existingPlan?.start_date ? parseLocalDate(existingPlan.start_date) : new Date();
@@ -336,14 +353,60 @@ export function EditorialCalendar({ userId, pillars, objectives, nicheContext, e
   const [newPostDate, setNewPostDate] = useState<Date | null>(null);
   const [dragItem, setDragItem] = useState<{ weekIdx: number; postIdx: number } | null>(null);
   const [dragOverDate, setDragOverDate] = useState<string | null>(null);
+  const [removedQuickPostIds, setRemovedQuickPostIds] = useState<Set<string>>(new Set());
+
+  const handleRemoveQuickPost = async (id: string) => {
+    setRemovedQuickPostIds(prev => new Set(prev).add(id));
+    try {
+      await fetch('/api/ideas/unschedule', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id }),
+      });
+    } catch {
+      setRemovedQuickPostIds(prev => { const s = new Set(prev); s.delete(id); return s; });
+    }
+  };
+
+  const handleStatusChange = async (weekIdx: number, postIdx: number, status: PostStatus, quickPostId?: string) => {
+    if (quickPostId) {
+      // Quick post — update in metadata
+      fetch('/api/ideas/status', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: quickPostId, status }),
+      }).catch(() => {});
+    } else if (plan && weekIdx >= 0) {
+      // Plan post — update in plan object and persist
+      const updated: EditorialPlan = {
+        ...plan,
+        weeks: plan.weeks.map((w, wi) =>
+          wi !== weekIdx ? w : {
+            ...w,
+            posts: w.posts.map((p, pi) => pi !== postIdx ? p : { ...p, status }),
+          }
+        ),
+      };
+      setPlan(updated);
+      fetch('/api/editorial/update', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ plan: updated }),
+      }).catch(() => {});
+    }
+    // Also update the open modal post so the UI stays in sync
+    if (modalPost) {
+      setModalPost(prev => prev ? { ...prev, post: { ...prev.post, status } } : null);
+    }
+  };
 
   // Derived values
   const datePostMap = plan
     ? buildDatePostMap(plan)
     : new Map<string, { post: PostSlot; weekIdx: number; postIdx: number }[]>();
 
-  // Merge quick posts (hot-topic additions) into the map
-  quickPosts.forEach((qp) => {
+  // Merge quick posts (hot-topic additions) into the map, excluding locally removed ones
+  quickPosts.filter(qp => !removedQuickPostIds.has(qp.id)).forEach((qp) => {
     const slot: PostSlot = {
       day: qp.day_name,
       pillar: qp.pillar,
@@ -351,8 +414,16 @@ export function EditorialCalendar({ userId, pillars, objectives, nicheContext, e
       objective: qp.objective,
       format: qp.format,
       topic: qp.topic,
-      hook: '',
+      hook: qp.hook ?? '',
+      source: qp.source,
       is_suggestion: true,
+      quick_post_id: qp.id,
+      status: qp.status ?? 'new',
+      lab_hooks: qp.lab_hooks,
+      lab_credibility_score: qp.lab_credibility_score,
+      lab_key_findings: qp.lab_key_findings,
+      lab_trend_alignment: qp.lab_trend_alignment,
+      lab_relevance_score: qp.lab_relevance_score,
     };
     const existing = datePostMap.get(qp.date) ?? [];
     datePostMap.set(qp.date, [...existing, { post: slot, weekIdx: -1, postIdx: -1 }]);
@@ -689,11 +760,11 @@ export function EditorialCalendar({ userId, pillars, objectives, nicheContext, e
         </div>
       )}
 
-      {/* Monthly calendar view */}
-      {viewMode === 'monthly' && (
+      {/* Shared: strategic notes + month nav + status legend + view toggle */}
+      {(viewMode === 'monthly' || viewMode === 'table') && (
         <div>
           {/* Strategic notes */}
-          {plan?.strategic_notes && !hideControls && (
+          {plan?.strategic_notes && !hideControls && viewMode === 'monthly' && (
             <div className="mb-5 bg-gradient-to-br from-sage/5 to-dusty-rose/5 border border-sage/10 rounded-3xl p-5">
               <div className="flex items-start gap-3">
                 <Sparkles className="w-4 h-4 text-dusty-rose flex-shrink-0 mt-0.5" />
@@ -705,27 +776,60 @@ export function EditorialCalendar({ userId, pillars, objectives, nicheContext, e
               </p>
             </div>
           )}
-          {/* Month navigation */}
-          <div className="flex items-center justify-between mb-4">
+          {/* Month navigation + status legend + view toggle */}
+          <div className="flex items-center justify-between mb-4 gap-4">
+            {/* Prev */}
             <button
               onClick={() => setViewMonth(({ year, month }) => month === 0 ? { year: year - 1, month: 11 } : { year, month: month - 1 })}
-              className="w-9 h-9 rounded-xl border border-sage/15 flex items-center justify-center text-sage/40 hover:text-sage hover:border-sage/30 transition-colors"
+              className="w-9 h-9 shrink-0 rounded-xl border border-sage/15 flex items-center justify-center text-sage/40 hover:text-sage hover:border-sage/30 transition-colors"
             >
               <ChevronLeft className="w-4 h-4" />
             </button>
-            <h3 className="font-serif text-2xl text-sage">
+
+            {/* Month title */}
+            <h3 className="font-serif text-2xl text-sage shrink-0">
               {MONTH_NAMES[viewMonth.month]} {viewMonth.year}
             </h3>
+
+            {/* Status legend */}
+            <div className="flex items-center gap-3 flex-1 justify-center flex-wrap">
+              {(Object.entries(STATUS_CONFIG) as [PostStatus, typeof STATUS_CONFIG[PostStatus]][]).map(([key, cfg]) => (
+                <span key={key} className="flex items-center gap-1.5 text-[11px] text-sage/60">
+                  <span className={`w-2 h-2 rounded-full shrink-0 ${cfg.dot}`} />
+                  {cfg.label}
+                </span>
+              ))}
+            </div>
+
+            {/* View toggle */}
+            <div className="flex items-center gap-1 p-1 bg-sage/5 rounded-xl shrink-0">
+              <button
+                onClick={() => setViewMode('monthly')}
+                className={`p-1.5 rounded-lg transition-all ${viewMode === 'monthly' ? 'bg-white text-sage shadow-sm' : 'text-sage/40 hover:text-sage'}`}
+                title="Calendar view"
+              >
+                <CalendarDays className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => setViewMode('table')}
+                className={`p-1.5 rounded-lg transition-all ${viewMode === 'table' ? 'bg-white text-sage shadow-sm' : 'text-sage/40 hover:text-sage'}`}
+                title="Table view"
+              >
+                <Table2 className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Next */}
             <button
               onClick={() => setViewMonth(({ year, month }) => month === 11 ? { year: year + 1, month: 0 } : { year, month: month + 1 })}
-              className="w-9 h-9 rounded-xl border border-sage/15 flex items-center justify-center text-sage/40 hover:text-sage hover:border-sage/30 transition-colors"
+              className="w-9 h-9 shrink-0 rounded-xl border border-sage/15 flex items-center justify-center text-sage/40 hover:text-sage hover:border-sage/30 transition-colors"
             >
               <ChevronRight className="w-4 h-4" />
             </button>
           </div>
 
           {/* Calendar grid */}
-          <div className="bg-white border border-warm-border rounded-3xl overflow-hidden shadow-soft">
+          {viewMode === 'monthly' && <div className="bg-white border border-warm-border rounded-3xl overflow-hidden shadow-soft">
             {/* Day-of-week header */}
             <div className="grid grid-cols-7 bg-sage/[0.02] border-b border-sage/8">
               {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((d, i) => (
@@ -798,8 +902,35 @@ export function EditorialCalendar({ userId, pillars, objectives, nicheContext, e
                     ))}
 
                     {/* Post chips */}
-                    {postsOnDate.slice(0, 3).map(({ post, weekIdx: wi, postIdx: pi }) => {
+                    {postsOnDate.slice(0, 4).map(({ post, weekIdx: wi, postIdx: pi }) => {
                       const style = CONTENT_TYPE_STYLES[post.contentType] ?? CONTENT_TYPE_STYLES.Value;
+                      const statusCfg = post.status ? STATUS_CONFIG[post.status] : null;
+                      const dotEl = statusCfg ? (
+                        <span
+                          className={`w-1.5 h-1.5 rounded-full shrink-0 ${statusCfg.dot}`}
+                          title={statusCfg.label}
+                        />
+                      ) : null;
+
+                      if (post.is_suggestion && post.quick_post_id) {
+                        return (
+                          <div
+                            key={`qp-${post.quick_post_id}`}
+                            onClick={() => setModalPost({ post, weekIdx: wi, postIdx: pi, dateStr })}
+                            className={`group/chip w-full flex items-center gap-1 px-1.5 py-0.5 mb-0.5 rounded text-[10px] transition-colors cursor-pointer ${style.chip}`}
+                          >
+                            {dotEl}
+                            <span className="flex-1 truncate">{post.topic}</span>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); handleRemoveQuickPost(post.quick_post_id!); }}
+                              className="shrink-0 opacity-0 group-hover/chip:opacity-100 transition-opacity text-current"
+                              title="Remove from calendar"
+                            >
+                              <X className="w-2.5 h-2.5" />
+                            </button>
+                          </div>
+                        );
+                      }
                       return (
                         <button
                           key={`${wi}-${pi}`}
@@ -810,15 +941,18 @@ export function EditorialCalendar({ userId, pillars, objectives, nicheContext, e
                             e.dataTransfer.effectAllowed = 'move';
                           } : undefined}
                           onDragEnd={() => { setDragItem(null); setDragOverDate(null); }}
-                          className={`w-full text-left px-1.5 py-0.5 mb-0.5 rounded text-[10px] truncate transition-colors ${style.chip} ${!hideControls ? 'cursor-grab active:cursor-grabbing' : ''} ${dragItem?.weekIdx === wi && dragItem?.postIdx === pi ? 'opacity-40' : ''}`}
+                          className={`w-full text-left flex items-center gap-1 px-1.5 py-0.5 mb-0.5 rounded text-[10px] transition-colors ${style.chip} ${!hideControls ? 'cursor-grab active:cursor-grabbing' : ''} ${dragItem?.weekIdx === wi && dragItem?.postIdx === pi ? 'opacity-40' : ''}`}
                         >
-                          {post.event_tag ? `${post.event_tag.split(' ')[0]} ` : ''}{post.topic}
+                          {dotEl}
+                          <span className="truncate flex-1">
+                            {post.event_tag ? `${post.event_tag.split(' ')[0]} ` : ''}{post.topic}
+                          </span>
                         </button>
                       );
                     })}
-                    {postsOnDate.length > 3 && (
+                    {postsOnDate.length > 4 && (
                       <span className="text-[9px] text-sage/40 pl-1.5">
-                        +{postsOnDate.length - 3} more
+                        +{postsOnDate.length - 4} more
                       </span>
                     )}
 
@@ -867,7 +1001,7 @@ export function EditorialCalendar({ userId, pillars, objectives, nicheContext, e
                 );
               })}
             </div>
-          </div>
+          </div>}
 
           {/* Empty month CTA */}
           {plan && !monthHasPosts && !isGenerating && (
@@ -886,6 +1020,77 @@ export function EditorialCalendar({ userId, pillars, objectives, nicheContext, e
 
         </div>
       )}
+
+      {/* Table view */}
+      {(viewMode as string) === 'table' && (() => {
+        const monthKey = `${viewMonth.year}-${String(viewMonth.month + 1).padStart(2, '0')}`;
+        const rows = [...datePostMap.entries()]
+          .filter(([date]) => date.startsWith(monthKey))
+          .flatMap(([date, slots]) => slots.map(s => ({ date, post: s.post, weekIdx: s.weekIdx, postIdx: s.postIdx })))
+          .sort((a, b) => a.date.localeCompare(b.date));
+
+        const fmtDate = (d: string) => {
+          const [y, m, day] = d.split('-');
+          return `${day}/${m}/${y}`;
+        };
+
+        return (
+          <div className="bg-white border border-warm-border rounded-3xl shadow-soft overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="bg-sage/[0.03] border-b border-sage/8">
+                    {['Date', 'Objective', 'Pillar', 'Format', 'Topic / Subject', 'Hook / Description', 'Status'].map(h => (
+                      <th key={h} className="text-left text-[10px] font-bold text-sage/40 uppercase tracking-widest px-4 py-3 whitespace-nowrap">
+                        {h}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {rows.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="text-center py-12 text-sage/40 text-sm">
+                        No posts scheduled for {MONTH_NAMES[viewMonth.month]} {viewMonth.year}
+                      </td>
+                    </tr>
+                  ) : rows.map(({ date, post, weekIdx, postIdx }, i) => {
+                    const statusCfg = post.status ? STATUS_CONFIG[post.status] : null;
+                    return (
+                      <tr
+                        key={`${date}-${i}`}
+                        onClick={() => setModalPost({ post, weekIdx, postIdx, dateStr: date })}
+                        className="border-b border-sage/5 last:border-0 hover:bg-sage/[0.02] cursor-pointer transition-colors"
+                      >
+                        <td className="px-4 py-3 font-medium text-sage/70 whitespace-nowrap">{fmtDate(date)}</td>
+                        <td className="px-4 py-3 text-sage/60">{post.objective}</td>
+                        <td className="px-4 py-3 text-sage/60 max-w-[140px] truncate">{post.pillar}</td>
+                        <td className="px-4 py-3">
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-sage/8 text-sage/60">{post.format}</span>
+                        </td>
+                        <td className="px-4 py-3 text-sage font-medium max-w-[200px]">
+                          <span className="line-clamp-2 leading-snug">{post.topic}</span>
+                        </td>
+                        <td className="px-4 py-3 text-sage/55 max-w-[220px]">
+                          <span className="line-clamp-2 leading-snug text-xs">{post.hook || '—'}</span>
+                        </td>
+                        <td className="px-4 py-3">
+                          {statusCfg && (
+                            <span className={`flex items-center gap-1.5 text-[11px] font-semibold ${statusCfg.text}`}>
+                              <span className={`w-2 h-2 rounded-full shrink-0 ${statusCfg.dot}`} />
+                              {statusCfg.label}
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Empty state */}
       {!plan && !isGenerating && viewMode === 'monthly' && (
@@ -907,9 +1112,9 @@ export function EditorialCalendar({ userId, pillars, objectives, nicheContext, e
           postIdx={modalPost.postIdx}
           dateStr={modalPost.dateStr}
           nicheContext={nicheContext}
-          projects={projects}
           onClose={() => setModalPost(null)}
-          onLinkProject={handleLinkProject}
+          onStatusChange={handleStatusChange}
+          onDelete={modalPost.post.quick_post_id ? () => { handleRemoveQuickPost(modalPost.post.quick_post_id!); setModalPost(null); } : undefined}
         />
       )}
 

@@ -33,6 +33,13 @@ export async function POST(request: Request) {
       sales:        'Conversion',
     };
 
+    const FORMAT_LABEL: Record<string, string> = {
+      carousel:     'Carousel',
+      reel:         'Reel',
+      storytelling: 'Story',
+      sales:        'Sales Post',
+    };
+
     const newQuickPosts = ideas.map(idea => ({
       id: crypto.randomUUID(),
       date: idea.scheduled_date,
@@ -41,16 +48,17 @@ export async function POST(request: Request) {
       pillar,
       contentType: idea.contentType,
       objective: OBJECTIVE[idea.format.toLowerCase()] ?? 'Visibility',
-      format: idea.format.charAt(0).toUpperCase() + idea.format.slice(1),
+      format: FORMAT_LABEL[idea.format.toLowerCase()] ?? (idea.format.charAt(0).toUpperCase() + idea.format.slice(1)),
       hook: idea.hook,
       source: 'discover',
+      status: 'new',
       created_at: new Date().toISOString(),
     }));
 
     const supabase = await createClient();
     const existing: any[] = (user.metadata as any)?.quick_posts ?? [];
-    // Replace previous discover ideas for this pillar, keep everything else
-    const kept = existing.filter((p: any) => !(p.source === 'discover' && p.pillar === pillar));
+    // Remove exact duplicates by hook (in case same idea is added twice), keep everything else
+    const kept = existing.filter((p: any) => !newQuickPosts.some(n => n.hook === p.hook));
     const updated = [...newQuickPosts, ...kept].slice(0, 200);
 
     const { error } = await supabase

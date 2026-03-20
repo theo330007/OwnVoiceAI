@@ -15,21 +15,36 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
+    // Enrich with full user profile
+    const strategy = (user.metadata as any)?.strategy || {};
+    const verbalTerritory: string[] = strategy.verbal_territory || [];
+    const profileLines = [
+      strategy.biography       ? `Creator bio: ${strategy.biography}` : '',
+      strategy.positioning     ? `Unique positioning: ${strategy.positioning}` : '',
+      strategy.audience        ? `Target audience: ${strategy.audience}` : '',
+      strategy.offering        ? `Core offering: ${strategy.offering}` : '',
+      strategy.transformation  ? `Transformation they deliver: ${strategy.transformation}` : '',
+      verbalTerritory.length   ? `Voice & style: ${verbalTerritory.join(', ')}` : '',
+    ].filter(Boolean).join('\n');
+
     const model = genAI.getGenerativeModel({
       model: 'gemini-2.0-flash',
-      generationConfig: { temperature: 0.75, maxOutputTokens: 256 },
+      generationConfig: { temperature: 0.75, maxOutputTokens: 300 },
     });
 
-    const prompt = `You are a content strategist for a ${nicheContext} creator.
+    const prompt = `You are a content strategist for a creator in the ${nicheContext} space.
 
-Post:
+Creator profile:
+${profileLines || `Niche: ${nicheContext}`}
+
+Post to prepare:
 - Topic: ${topic}
 - Hook: "${hook}"
 - Pillar: ${pillar}
 - Type: ${contentType} | Format: ${format}
 
 Generate exactly 3 short content angles or talking points the creator should cover in this post.
-Each bullet should be actionable, niche-specific, and 1–2 sentences.
+Each bullet must be actionable, deeply tailored to their voice and audience, and 1–2 sentences max.
 
 Return ONLY valid JSON (no markdown):
 { "angles": ["...", "...", "..."] }`;

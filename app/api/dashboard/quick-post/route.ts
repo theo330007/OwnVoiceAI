@@ -12,6 +12,7 @@ export interface QuickPost {
   objective: string;
   format: string;
   hook: string;
+  status?: 'new' | 'draft' | 'validated' | 'complete';
   created_at: string;
 }
 
@@ -42,6 +43,7 @@ export async function POST(request: Request) {
       objective: 'Visibility',
       format: 'Reel',
       hook: '',
+      status: 'new',
       created_at: new Date().toISOString(),
     };
 

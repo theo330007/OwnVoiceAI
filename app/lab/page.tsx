@@ -2,8 +2,17 @@ import { ChatInterface } from './components/ChatInterface';
 import { UserProfileCard } from './components/UserProfileCard';
 import { getCurrentUser } from '@/lib/auth';
 
-export default async function LabPage() {
+export default async function LabPage({
+  searchParams,
+}: {
+  searchParams: { trend?: string; trendDesc?: string };
+}) {
   const user = await getCurrentUser();
+  const pillars: { title: string }[] = (user?.metadata as any)?.strategy?.content_pillars ?? [];
+  const initialTrend = searchParams.trend
+    ? { title: searchParams.trend, description: searchParams.trendDesc }
+    : undefined;
+
   return (
     <div className="min-h-screen bg-cream">
       <div className="px-8 py-8">
@@ -22,7 +31,7 @@ export default async function LabPage() {
 
           {/* Right: chat */}
           <div className="col-span-2">
-            <ChatInterface user={user} />
+            <ChatInterface user={user} initialTrend={initialTrend} pillars={pillars} />
           </div>
         </div>
       </div>
