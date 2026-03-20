@@ -282,9 +282,8 @@ export function WeeklyCalendarStrip({ existingPlan, quickPosts, nicheContext, pr
           postIdx={modalPost.postIdx}
           dateStr={modalPost.dateStr}
           nicheContext={nicheContext}
-          projects={projects}
           onClose={() => setModalPost(null)}
-          onLinkProject={handleLinkProject}
+          onStatusChange={() => {}}
         />
       )}
     </>
